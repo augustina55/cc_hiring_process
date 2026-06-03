@@ -1929,9 +1929,33 @@
         }
         .pip-stop:hover { opacity: 0.85; }
         .pip-stop:active { opacity: 0.7; }
+        .pip-warn {
+          position: fixed; inset: 0;
+          background: rgba(10,8,7,0.94);
+          display: none; flex-direction: column;
+          align-items: center; justify-content: center;
+          gap: 11px; padding: 18px; text-align: center;
+        }
+        .pip-warn.on { display: flex; }
+        .pip-warn-icon { font-size: 28px; }
+        .pip-warn-title { color: #fff; font-size: 15px; font-weight: 800; letter-spacing: -0.2px; }
+        .pip-warn-msg { color: rgba(255,255,255,0.6); font-size: 12px; line-height: 1.6; }
+        .pip-warn-btns { display: flex; gap: 8px; width: 100%; margin-top: 4px; }
+        .pip-warn-no {
+          flex:1; padding: 11px 8px; cursor: pointer; font-family: inherit;
+          border: 1.5px solid rgba(255,255,255,0.22); background: transparent;
+          color: rgba(255,255,255,0.8); border-radius: 9px; font-size: 12px; font-weight: 700;
+        }
+        .pip-warn-no:hover { background: rgba(255,255,255,0.08); }
+        .pip-warn-yes {
+          flex:1; padding: 11px 8px; cursor: pointer; font-family: inherit;
+          border: none; background: #C83030; color: #fff;
+          border-radius: 9px; font-size: 12px; font-weight: 700;
+        }
+        .pip-warn-yes:hover { background: #A02020; }
       `;
       d.head.appendChild(st);
-      d.body.style.cssText = 'display:flex;flex-direction:column;height:100%;overflow:hidden;';
+      d.body.style.cssText = 'display:flex;flex-direction:column;height:100%;overflow:hidden;position:relative;';
 
       const bar = d.createElement('div');
       bar.className = 'pip-bar';
@@ -1955,6 +1979,20 @@
       btn.textContent = '■  Stop Recording';
       btn.onclick = () => stopRec();
       d.body.appendChild(btn);
+
+      // Warning overlay — shown inside PiP so user sees it while screen sharing
+      const warn = d.createElement('div');
+      warn.id = 'pip-warn'; warn.className = 'pip-warn';
+      warn.innerHTML = `
+        <div class="pip-warn-icon">⚠️</div>
+        <div class="pip-warn-title">Recording Too Short</div>
+        <div class="pip-warn-msg" id="pip-warn-msg">Please record at least 2:00.</div>
+        <div class="pip-warn-btns">
+          <button class="pip-warn-no" onclick="document.getElementById('pip-warn').classList.remove('on')">Keep Recording</button>
+          <button class="pip-warn-yes" onclick="document.getElementById('pip-warn').classList.remove('on');stopRec(true)">Stop Anyway</button>
+        </div>
+      `;
+      d.body.appendChild(warn);
 
       pipWin.addEventListener('pagehide', () => { pipWin = null; });
     } catch(e) { pipWin = null; }
@@ -2088,13 +2126,30 @@
 
   function showStopWarning() {
     const m = Math.floor(secs / 60), s = secs % 60;
+    const timeStr = m + ':' + String(s).padStart(2, '0');
+    if (pipWin) {
+      // Show warning inside the floating PiP window — visible while screen sharing
+      const msg = pipWin.document.getElementById('pip-warn-msg');
+      if (msg) msg.textContent = 'You have only recorded ' + timeStr + '. Please record at least 2:00.';
+      const warn = pipWin.document.getElementById('pip-warn');
+      if (warn) warn.classList.add('on');
+      return;
+    }
+    // Fallback: no PiP open, show on main page
     const el = document.getElementById('stop-warn-time');
-    if (el) el.textContent = m + ':' + String(s).padStart(2, '0');
+    if (el) el.textContent = timeStr;
     document.getElementById('stop-warn-overlay').classList.add('on');
   }
-  function stopWarnClose() { document.getElementById('stop-warn-overlay').classList.remove('on'); }
-  function stopWarnConfirm() {
+  function stopWarnClose() {
+    if (pipWin) {
+      const warn = pipWin.document.getElementById('pip-warn');
+      if (warn) warn.classList.remove('on');
+      return;
+    }
     document.getElementById('stop-warn-overlay').classList.remove('on');
+  }
+  function stopWarnConfirm() {
+    stopWarnClose();
     stopRec(true);
   }
 
