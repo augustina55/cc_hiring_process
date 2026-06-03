@@ -863,7 +863,11 @@
     }
     .rec-pip-stop:hover { background: rgba(190,30,30,0.96); }
     #v2-recording .rec-controls {
-      margin-top: 10px; justify-content: center; gap: 10px;
+      margin-top: 10px; justify-content: center; gap: 10px; flex-wrap: wrap;
+    }
+    #v2-recording .rec-controls .btn-back,
+    #v2-recording .rec-controls .btn-cta {
+      flex: 1; min-width: 140px; max-width: 240px; justify-content: center;
     }
     /* ── Recording setup panel ── */
     .v2-setup-card {
@@ -926,12 +930,16 @@
     .v2-device-row {
       display: flex; align-items: center; gap: 8px;
     }
-    #audio-device-sel {
+    #audio-device-sel, #cam-device-sel {
       flex: 1; padding: 7px 10px; border-radius: 8px;
       border: 1.5px solid var(--border); background: var(--white);
       font-size: 13px; color: var(--text); outline: none;
     }
-    #audio-device-sel:focus { border-color: var(--orange); }
+    #audio-device-sel:focus, #cam-device-sel:focus { border-color: var(--orange); }
+    input.inp-err {
+      border-color: var(--req) !important;
+      box-shadow: 0 0 0 3px rgba(224,64,64,0.12) !important;
+    }
     .v2-level-wrap {
       display: flex; align-items: center; gap: 10px; margin-top: 2px;
     }
@@ -957,12 +965,12 @@
     }
     .v2-cam-controls { flex-shrink: 0; }
     .v2-cam-preview-box {
-      flex: 1; aspect-ratio: 4/3; border-radius: 10px; overflow: hidden;
+      flex: 1; aspect-ratio: 1/1; border-radius: 10px; overflow: hidden;
       background: #1A1410; position: relative;
-      border: 1.5px solid var(--border); max-height: 160px;
+      border: 1.5px solid var(--border); max-height: 200px;
     }
     #setup-cam-preview {
-      width: 100%; height: 100%; object-fit: cover; display: block;
+      width: 100%; height: 100%; object-fit: contain; display: block;
     }
     .v2-cam-placeholder {
       position: absolute; inset: 0; display: flex;
@@ -1079,6 +1087,39 @@
       .r-nav-bar { flex-direction: column; gap: 10px; }
       .r-nav-bar .btn-back, .r-nav-bar .btn-cta { width: 100%; justify-content: center; }
     }
+
+    /* ── Stop-too-short warning modal ── */
+    .stop-warn-overlay {
+      position: fixed; inset: 0;
+      background: rgba(26,20,16,0.55);
+      display: none; align-items: center; justify-content: center;
+      z-index: 1001; backdrop-filter: blur(4px);
+    }
+    .stop-warn-overlay.on { display: flex; }
+    .stop-warn-card {
+      background: var(--white); border-radius: 20px;
+      padding: 32px 32px 28px; max-width: 380px; width: 90%;
+      box-shadow: 0 28px 60px rgba(0,0,0,0.22); text-align: center;
+    }
+    .stop-warn-ico {
+      width: 56px; height: 56px; border-radius: 50%;
+      background: #FFF5E0; border: 2px solid rgba(240,160,32,0.25);
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 16px; font-size: 24px;
+    }
+    .stop-warn-title {
+      font-size: 18px; font-weight: 800; color: var(--text);
+      letter-spacing: -0.3px; margin-bottom: 10px;
+    }
+    .stop-warn-body {
+      font-size: 14px; color: var(--sub); line-height: 1.65; margin-bottom: 18px;
+    }
+    .stop-warn-body strong { color: var(--text); }
+    .stop-warn-btns {
+      display: flex; gap: 10px;
+    }
+    .stop-warn-btns .btn-back { flex: 1; justify-content: center; }
+    .stop-warn-btns .btn-cta  { flex: 1; justify-content: center; font-size: 14px; padding: 13px; }
   </style>
 </head>
 <body>
@@ -1169,7 +1210,7 @@
               <label class="f-label">Full Name <span class="req">*</span></label>
               <div class="inp-wrap">
                 <div class="inp-ico"></div>
-                <input type="text" id="f-name" placeholder="Enter your full name" />
+                <input type="text" id="f-name" placeholder="Enter your full name" oninput="filterTextOnly(this)" />
               </div>
             </div>
             <!-- Email -->
@@ -1193,7 +1234,7 @@
               <label class="f-label">Which city are you based out of? <span class="req">*</span></label>
               <div class="inp-wrap">
                 <div class="inp-ico"></div>
-                <input type="text" id="f-city" placeholder="City, Country" />
+                <input type="text" id="f-city" placeholder="City, Country" oninput="filterTextOnly(this)" />
               </div>
             </div>
           </div>
@@ -1221,7 +1262,7 @@
               <label class="f-label">FIDE ID <span class="opt">(optional)</span></label>
               <div class="inp-wrap">
                 <div class="inp-ico"></div>
-                <input type="text" id="f-fideid" placeholder="e.g. 5000017" />
+                <input type="number" id="f-fideid" placeholder="e.g. 5000017" min="0" step="1" />
               </div>
             </div>
           </div>
@@ -1407,9 +1448,18 @@
               <div class="v2-stp-tick" id="tick-cam"></div>
             </div>
             <div class="v2-stp-body" id="body-cam">
+              <div class="v2-device-row">
+                <svg width="14" height="14" viewBox="0 0 22 18" fill="none" style="flex-shrink:0;color:var(--sub)">
+                  <rect x="1" y="3" width="14" height="12" rx="2.5" stroke="currentColor" stroke-width="1.6"/>
+                  <path d="M15 7.5l5.5-3v9L15 10.5" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+                </svg>
+                <select id="cam-device-sel" onchange="changeCamDevice()">
+                  <option value="">Select a camera…</option>
+                </select>
+              </div>
               <div class="v2-cam-body">
                 <div class="v2-cam-controls">
-                  <button class="btn-back" id="btn-cam-test" onclick="startCamTest()">Turn On Camera</button>
+                  <button class="btn-back" id="btn-cam-test" onclick="startCamTest()">Test Camera</button>
                 </div>
                 <div class="v2-cam-preview-box" id="cam-preview-box">
                   <video id="setup-cam-preview" autoplay muted playsinline></video>
@@ -1440,6 +1490,7 @@
               <div class="v2-screen-badge-dot"></div>REC
             </div>
             <div class="v2-rec-main-timer" id="rec-timer-main">2:30</div>
+            <div style="font-size:11px;font-weight:700;color:var(--sub);letter-spacing:0.5px;text-transform:uppercase;white-space:nowrap" id="rec-timer-label">Remaining</div>
           </div>
           <div class="v2-rec-screen-area" id="rec-screen-area">
             <video id="rec-screen-preview" autoplay muted playsinline></video>
@@ -1481,6 +1532,40 @@
 
 </div>
 
+<!-- Stop-too-short warning -->
+<div class="stop-warn-overlay" id="stop-warn-overlay">
+  <div class="stop-warn-card">
+    <div class="stop-warn-ico">⚠️</div>
+    <h3 class="stop-warn-title">Recording Too Short</h3>
+    <p class="stop-warn-body">
+      You have only recorded <strong id="stop-warn-time">0:00</strong>.<br>
+      Please record at least <strong>2:00</strong> for a complete evaluation.
+    </p>
+    <p class="stop-warn-body" style="margin-bottom:22px;font-weight:600;color:var(--text)">Are you sure you want to stop?</p>
+    <div class="stop-warn-btns">
+      <button class="btn-back" onclick="stopWarnClose()">No, Keep Recording</button>
+      <button class="btn-cta" onclick="stopWarnConfirm()">Yes, Stop</button>
+    </div>
+  </div>
+</div>
+
+<!-- Submit confirm -->
+<div class="stop-warn-overlay" id="submit-confirm-overlay">
+  <div class="stop-warn-card">
+    <div class="stop-warn-ico">📋</div>
+    <h3 class="stop-warn-title">Confirm Submission</h3>
+    <p class="stop-warn-body">You are about to submit your application with the following details:</p>
+    <div style="background:var(--bg);border-radius:10px;padding:14px 16px;margin-bottom:20px;text-align:left">
+      <div style="font-size:13px;margin-bottom:7px"><span style="color:var(--sub);font-weight:600">Name:</span> <span id="sc-name" style="color:var(--text);font-weight:700"></span></div>
+      <div style="font-size:13px"><span style="color:var(--sub);font-weight:600">Video duration:</span> <span id="sc-duration" style="color:var(--text);font-weight:700"></span></div>
+    </div>
+    <div class="stop-warn-btns">
+      <button class="btn-back" onclick="submitConfirmClose()">Cancel</button>
+      <button class="btn-cta" onclick="submitConfirmed()">Submit Application</button>
+    </div>
+  </div>
+</div>
+
 <!-- Submit Progress Overlay -->
 <div class="submit-overlay" id="submit-overlay">
   <div class="submit-overlay-card">
@@ -1495,6 +1580,15 @@
 <script>
   
   const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxoraWDXlBoXdXiN0A2-bIW9dBpnV3nM6HpV7cmRn9tM8ZJVV7iERIxsHInVuzEXJXs/exec';
+
+  function filterTextOnly(input) {
+    const clean = input.value.replace(/[^a-zA-ZÀ-ÿ\s\-'.,]/g, '');
+    if (clean !== input.value) {
+      input.value = clean;
+      input.classList.add('inp-err');
+      setTimeout(() => input.classList.remove('inp-err'), 500);
+    }
+  }
   const CHUNK_SIZE  = 2 * 1024 * 1024; // 2 MB per chunk
 
   let cur = 1;
@@ -1566,11 +1660,36 @@
     }
   }
 
+  function showRecordedDuration() {
+    const m = Math.floor(secs / 60), s = secs % 60;
+    const str = m + ':' + String(s).padStart(2, '0');
+    const rtm = document.getElementById('rec-timer-main');
+    if (rtm) rtm.textContent = str;
+    const lbl = document.getElementById('rec-timer-label');
+    if (lbl) lbl.textContent = 'Recorded';
+  }
+
+  function resetCamSetup() {
+    if (setupCamStream) { setupCamStream.getTracks().forEach(t => t.stop()); setupCamStream = null; }
+    const btn  = document.getElementById('btn-cam-test');
+    const prev = document.getElementById('setup-cam-preview');
+    const ph   = document.getElementById('cam-placeholder');
+    if (btn)  { btn.disabled = false; btn.textContent = 'Test Camera'; }
+    if (prev) prev.srcObject = null;
+    if (ph)   ph.style.display = 'flex';
+  }
+
   function showSetup() {
+    resetCamSetup();
+    ticks = { audio: false, cam: false };
+    ['tick-audio','tick-cam'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.classList.remove('active');
+    });
+    document.getElementById('btn-begin').disabled = true;
     document.getElementById('v2-rules').style.display    = 'none';
     document.getElementById('v2-setup').style.display    = 'block';
     document.getElementById('v2-recording').style.display = 'none';
-    // Advance to step 3 in nav
     const ls2 = document.getElementById('ls-2');
     const ls3 = document.getElementById('ls-3');
     if (ls2) { ls2.classList.remove('active'); ls2.classList.add('done'); }
@@ -1580,7 +1699,7 @@
 
   function cancelSetup() {
     stopAudioTest();
-    if (setupCamStream) { setupCamStream.getTracks().forEach(t => t.stop()); setupCamStream = null; }
+    resetCamSetup();
     ticks = { audio: false, cam: false };
     ['tick-audio','tick-cam'].forEach(id => {
       const el = document.getElementById(id);
@@ -1589,7 +1708,6 @@
     document.getElementById('btn-begin').disabled = true;
     document.getElementById('v2-setup').style.display = 'none';
     document.getElementById('v2-rules').style.display = 'block';
-    // Revert nav back to step 2
     const ls2 = document.getElementById('ls-2');
     const ls3 = document.getElementById('ls-3');
     if (ls2) { ls2.classList.remove('done'); ls2.classList.add('active'); }
@@ -1709,18 +1827,51 @@
     startAudioTest();
   }
 
-  async function startCamTest() {
+  async function populateCamDevices() {
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const cams = devices.filter(d => d.kind === 'videoinput');
+      const sel = document.getElementById('cam-device-sel');
+      if (!sel) return;
+      sel.innerHTML = '';
+      if (!cams.length) { sel.innerHTML = '<option value="">No cameras found</option>'; return; }
+      cams.forEach((d, i) => {
+        const opt = document.createElement('option');
+        opt.value = d.deviceId;
+        opt.textContent = d.label || 'Camera ' + (i + 1);
+        sel.appendChild(opt);
+      });
+    } catch(e) {}
+  }
+
+  async function changeCamDevice() {
+    const sel = document.getElementById('cam-device-sel');
+    if (!sel || !sel.value) return;
+    ticks.cam = false;
+    const tick = document.getElementById('tick-cam');
+    if (tick) tick.classList.remove('active');
+    document.getElementById('btn-begin').disabled = true;
+    resetCamSetup();
+    startCamTest(sel.value);
+  }
+
+  async function startCamTest(deviceId) {
     const btn = document.getElementById('btn-cam-test');
     if (btn) { btn.disabled = true; btn.textContent = 'Camera On'; }
     try {
-      setupCamStream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 360 }, audio: false });
+      const vc = deviceId ? { deviceId: { exact: deviceId }, width: 640, height: 480 } : { width: 640, height: 480 };
+      setupCamStream = await navigator.mediaDevices.getUserMedia({ video: vc, audio: false });
+      await populateCamDevices();
+      const activeId = setupCamStream.getVideoTracks()[0].getSettings().deviceId;
+      const sel = document.getElementById('cam-device-sel');
+      if (sel && activeId) sel.value = activeId;
       const prev = document.getElementById('setup-cam-preview');
       const ph   = document.getElementById('cam-placeholder');
       if (prev) { prev.srcObject = setupCamStream; await prev.play(); }
       if (ph)   ph.style.display = 'none';
       setTimeout(() => setTick('cam'), 2000);
     } catch(err) {
-      if (btn) { btn.disabled = false; btn.textContent = 'Turn On Camera'; }
+      if (btn) { btn.disabled = false; btn.textContent = 'Test Camera'; }
       alert('Camera access denied. Please allow camera and try again.');
     }
   }
@@ -1728,46 +1879,86 @@
   async function openDocumentPiP(stream) {
     if (!window.documentPictureInPicture) return;
     try {
-      pipWin = await window.documentPictureInPicture.requestWindow({ width: 280, height: 280 });
+      pipWin = await window.documentPictureInPicture.requestWindow({ width: 300, height: 340 });
       const d = pipWin.document;
       d.title = 'CircleChess';
-      d.body.style.cssText =
-        'margin:0;padding:0;background:#111;display:flex;flex-direction:column;' +
-        'align-items:stretch;height:100%;font-family:Inter,sans-serif;overflow:hidden;';
 
-      // Timer
+      const st = d.createElement('style');
+      st.textContent = `
+        @import url('https://fonts.googleapis.com/css2?family=Lora:wght@600;700&display=swap');
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+          background: linear-gradient(180deg, #0C0A09 0%, #1A1410 100%);
+          display: flex; flex-direction: column; height: 100%;
+          font-family: 'Inter', -apple-system, sans-serif; overflow: hidden;
+        }
+        .pip-bar {
+          display: flex; align-items: center; justify-content: space-between;
+          padding: 10px 14px 4px; flex-shrink: 0;
+        }
+        .pip-rec-badge {
+          display: flex; align-items: center; gap: 5px;
+          font-size: 10px; font-weight: 700; letter-spacing: 1.3px;
+          color: rgba(255,255,255,0.4); text-transform: uppercase;
+        }
+        .pip-rec-dot {
+          width: 6px; height: 6px; border-radius: 50%;
+          background: #E03030; flex-shrink: 0;
+          animation: pb 1s step-start infinite;
+        }
+        @keyframes pb { 50% { opacity: 0; } }
+        .pip-brand { font-size: 11px; font-weight: 700; color: rgba(240,160,32,0.65); letter-spacing: 0.3px; }
+        .pip-timer {
+          font-family: 'Lora', Georgia, serif;
+          font-size: 48px; font-weight: 700; color: #E83030;
+          text-align: center; letter-spacing: -1px;
+          font-variant-numeric: tabular-nums;
+          padding: 2px 0 6px; flex-shrink: 0;
+          text-shadow: 0 0 28px rgba(230,48,48,0.4);
+        }
+        .pip-video {
+          flex: 1; width: 100%; display: block;
+          object-fit: contain; background: #000; min-height: 0;
+        }
+        .pip-stop {
+          flex-shrink: 0; width: 100%; padding: 14px 14px 18px;
+          border: none; cursor: pointer;
+          background: linear-gradient(180deg, #D43030 0%, #A82020 100%);
+          color: #fff; font-size: 13px; font-weight: 700;
+          letter-spacing: 0.5px; font-family: inherit;
+          transition: opacity 0.15s;
+        }
+        .pip-stop:hover { opacity: 0.85; }
+        .pip-stop:active { opacity: 0.7; }
+      `;
+      d.head.appendChild(st);
+      d.body.style.cssText = 'display:flex;flex-direction:column;height:100%;overflow:hidden;';
+
+      const bar = d.createElement('div');
+      bar.className = 'pip-bar';
+      bar.innerHTML = '<div class="pip-rec-badge"><div class="pip-rec-dot"></div>REC</div><div class="pip-brand">CircleChess</div>';
+      d.body.appendChild(bar);
+
       const tmr = d.createElement('div');
-      tmr.id = 'pip-tmr';
-      tmr.style.cssText =
-        'color:#E03030;font-size:26px;font-weight:900;text-align:center;' +
-        'padding:10px 0 6px;font-variant-numeric:tabular-nums;letter-spacing:-1px;' +
-        'text-shadow:0 0 12px rgba(220,48,48,0.6);flex-shrink:0;';
+      tmr.id = 'pip-tmr'; tmr.className = 'pip-timer';
       tmr.textContent = '2:30';
       d.body.appendChild(tmr);
 
-      // Camera video
       const vid = d.createElement('video');
       vid.autoplay = true; vid.muted = true; vid.playsInline = true;
-      vid.style.cssText = 'flex:1;width:100%;object-fit:cover;';
+      vid.className = 'pip-video';
       vid.srcObject = stream;
       d.body.appendChild(vid);
       vid.play().catch(() => {});
 
-      // Stop button
       const btn = d.createElement('button');
+      btn.className = 'pip-stop';
       btn.textContent = '■  Stop Recording';
-      btn.style.cssText =
-        'flex-shrink:0;width:100%;padding:14px 13px 18px;border:none;cursor:pointer;' +
-        'background:#C83030;color:#fff;font-size:13px;font-weight:800;letter-spacing:0.4px;';
-      btn.onmouseover = () => { btn.style.background = '#A02020'; };
-      btn.onmouseout  = () => { btn.style.background = '#C83030'; };
       btn.onclick = () => stopRec();
       d.body.appendChild(btn);
 
       pipWin.addEventListener('pagehide', () => { pipWin = null; });
-    } catch(e) {
-      pipWin = null;
-    }
+    } catch(e) { pipWin = null; }
   }
 
   async function beginRecording() {
@@ -1848,7 +2039,6 @@
         cancelAnimationFrame(rafId); rafId = null;
         const blob = new Blob(chunks, { type: mr.mimeType || 'video/webm' });
         uploadedVideoBlob = blob; uploadedVideoType = blob.type;
-        // Hide live elements, show done overlay with playback
         if (pip) pip.style.display = 'none';
         if (cf)  cf.srcObject = null;
         if (sp)  { sp.srcObject = null; sp.style.display = 'none'; }
@@ -1861,16 +2051,19 @@
         if (subBtn) subBtn.style.display = 'inline-flex';
         const liveBadge = document.getElementById('rec-live-badge');
         if (liveBadge) liveBadge.style.display = 'none';
+        showRecordedDuration();
       };
       mr.start(1000);
 
       const liveBadge = document.getElementById('rec-live-badge');
       if (liveBadge) liveBadge.style.display = 'flex';
 
-      screenStream.getVideoTracks()[0].addEventListener('ended', () => stopRec());
+      screenStream.getVideoTracks()[0].addEventListener('ended', () => stopRec(true));
 
+      const lbl = document.getElementById('rec-timer-label');
+      if (lbl) lbl.textContent = 'Remaining';
       secs = 0; updateRing(0);
-      ti = setInterval(() => { secs++; updateRing(secs); if (secs >= TOTAL) stopRec(); }, 1000);
+      ti = setInterval(() => { secs++; updateRing(secs); if (secs >= TOTAL) stopRec(true); }, 1000);
 
     } catch (err) {
       if (screenStream) { screenStream.getTracks().forEach(t => t.stop()); screenStream = null; }
@@ -1881,7 +2074,10 @@
     }
   }
 
-  function stopRec() {
+  function stopRec(force) {
+    if (!force && mr && mr.state === 'recording' && secs < 90) {
+      showStopWarning(); return;
+    }
     clearInterval(ti);
     cancelAnimationFrame(rafId); rafId = null;
     if (pipWin) { try { pipWin.close(); } catch(e){} pipWin = null; }
@@ -1889,6 +2085,24 @@
     if (mr && mr.state !== 'inactive') mr.stop();
     if (screenStream) { screenStream.getTracks().forEach(t => t.stop()); screenStream = null; }
     if (camStream)    { camStream.getTracks().forEach(t => t.stop()); camStream = null; }
+  }
+
+  function showStopWarning() {
+    const m = Math.floor(secs / 60), s = secs % 60;
+    const el = document.getElementById('stop-warn-time');
+    if (el) el.textContent = m + ':' + String(s).padStart(2, '0');
+    document.getElementById('stop-warn-overlay').classList.add('on');
+  }
+  function stopWarnClose() { document.getElementById('stop-warn-overlay').classList.remove('on'); }
+  function stopWarnConfirm() {
+    document.getElementById('stop-warn-overlay').classList.remove('on');
+    stopRec(true);
+  }
+
+  function submitConfirmClose() { document.getElementById('submit-confirm-overlay').classList.remove('on'); }
+  function submitConfirmed() {
+    document.getElementById('submit-confirm-overlay').classList.remove('on');
+    doSubmitApp();
   }
 
   function retakeRec() {
@@ -1920,7 +2134,8 @@
     if (subBtn) subBtn.style.display = 'none';
     document.getElementById('v2-recording').style.display = 'none';
     document.getElementById('v2-rules').style.display     = 'block';
-    // Reset nav back to step 2
+    const lbl = document.getElementById('rec-timer-label');
+    if (lbl) lbl.textContent = 'Remaining';
     const ls2 = document.getElementById('ls-2');
     const ls3 = document.getElementById('ls-3');
     if (ls2) { ls2.classList.remove('done','pending'); ls2.classList.add('active'); }
@@ -2068,7 +2283,37 @@
   }
 
   /* submit */
-  async function submitApp() {
+  function submitApp() {
+    if (!uploadedVideoBlob) {
+      alert('Please record or upload your teaching demo video before submitting.');
+      return;
+    }
+    const nameEl = document.getElementById('f-name');
+    if (!nameEl || !nameEl.value.trim()) {
+      alert('"Full Name" is required.'); goTo(1); return;
+    }
+    // Get video duration for confirm dialog
+    let durStr = '—';
+    if (uploadedVideoBlob instanceof File) {
+      const url = URL.createObjectURL(uploadedVideoBlob);
+      const tmp = document.createElement('video');
+      tmp.preload = 'metadata';
+      tmp.onloadedmetadata = () => {
+        URL.revokeObjectURL(url);
+        const m = Math.floor(tmp.duration/60), s = Math.floor(tmp.duration%60);
+        document.getElementById('sc-duration').textContent = m + ':' + String(s).padStart(2,'0');
+      };
+      tmp.src = url;
+    } else {
+      const m = Math.floor(secs/60), s = secs % 60;
+      durStr = m + ':' + String(s).padStart(2,'0');
+      document.getElementById('sc-duration').textContent = durStr;
+    }
+    document.getElementById('sc-name').textContent = nameEl.value.trim();
+    document.getElementById('submit-confirm-overlay').classList.add('on');
+  }
+
+  async function doSubmitApp() {
     const required = [
       { id: 'f-name',        label: 'Full Name' },
       { id: 'f-email',       label: 'Email ID' },
