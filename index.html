@@ -830,6 +830,7 @@
     .v2-rec-screen-area {
       position: relative; width: 100%; aspect-ratio: 16/9;
       background: #111; border-radius: 10px; overflow: hidden;
+      max-height: 54vh;
     }
     #rec-screen-preview {
       width: 100%; height: 100%; object-fit: contain; display: block;
@@ -931,10 +932,12 @@
       display: flex; align-items: center; gap: 8px;
     }
     #audio-device-sel, #cam-device-sel {
-      flex: 1; padding: 7px 10px; border-radius: 8px;
+      padding: 7px 10px; border-radius: 8px;
       border: 1.5px solid var(--border); background: var(--white);
-      font-size: 13px; color: var(--text); outline: none;
+      font-size: 13px; color: var(--text); outline: none; flex-shrink: 0;
     }
+    #audio-device-sel { max-width: 160px; }
+    #cam-device-sel   { flex: 1; }
     #audio-device-sel:focus, #cam-device-sel:focus { border-color: var(--orange); }
     input.inp-err {
       border-color: var(--req) !important;
@@ -1305,7 +1308,7 @@
         <div class="r-nav-bar">
           <div class="r-secure">
           </div>
-          <button class="btn-cta" onclick="goTo(2)">
+          <button class="btn-cta" onclick="validateStep1()">
             Continue to Next Step
             <span class="btn-cta-arrow">&#8594;</span>
           </button>
@@ -1415,10 +1418,8 @@
                 <select id="audio-device-sel" onchange="changeAudioDevice()">
                   <option value="">Loading microphones…</option>
                 </select>
-              </div>
-              <div class="v2-level-wrap">
                 <div class="v2-level-bar"><div class="v2-level-fill" id="audio-level-fill"></div></div>
-                <span class="v2-level-hint" id="hint-audio-bar">Speak to test</span>
+                <span class="v2-level-hint" id="hint-audio-bar" style="flex-shrink:0">Speak to test</span>
               </div>
               <div class="v2-mic-error" id="mic-error" style="display:none">
                 <svg width="14" height="14" viewBox="0 0 15 15" fill="none">
@@ -1581,6 +1582,31 @@
   
   const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxoraWDXlBoXdXiN0A2-bIW9dBpnV3nM6HpV7cmRn9tM8ZJVV7iERIxsHInVuzEXJXs/exec';
 
+  function validateStep1() {
+    const required = [
+      { id: 'f-name',   label: 'Full Name' },
+      { id: 'f-email',  label: 'Email ID' },
+      { id: 'f-phone',  label: 'Phone Number' },
+      { id: 'f-city',   label: 'City' },
+    ];
+    for (const f of required) {
+      const el = document.getElementById(f.id);
+      if (!el || !el.value.trim()) {
+        if (el) { el.focus(); el.classList.add('inp-err'); setTimeout(() => el.classList.remove('inp-err'), 1500); }
+        alert('"' + f.label + '" is required.');
+        return;
+      }
+    }
+    const emailEl = document.getElementById('f-email');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailEl.value.trim())) {
+      emailEl.focus(); emailEl.classList.add('inp-err');
+      setTimeout(() => emailEl.classList.remove('inp-err'), 1500);
+      alert('Please enter a valid email address.');
+      return;
+    }
+    goTo(2);
+  }
+
   function filterTextOnly(input) {
     const clean = input.value.replace(/[^a-zA-ZÀ-ÿ\s\-'.,]/g, '');
     if (clean !== input.value) {
@@ -1655,8 +1681,10 @@
     const pit = document.getElementById('pip-timer');
     if (pit) pit.textContent = str;
     if (pipWin) {
-      const el = pipWin.document.getElementById('pip-tmr');
-      if (el) el.textContent = str;
+      const mm = pipWin.document.getElementById('pip-mm');
+      const ss = pipWin.document.getElementById('pip-ss');
+      if (mm) mm.textContent = String(m).padStart(2, '0');
+      if (ss) ss.textContent = String(s).padStart(2, '0');
     }
   }
 
@@ -1879,120 +1907,108 @@
   async function openDocumentPiP(stream) {
     if (!window.documentPictureInPicture) return;
     try {
-      pipWin = await window.documentPictureInPicture.requestWindow({ width: 300, height: 380 });
+      pipWin = await window.documentPictureInPicture.requestWindow({ width: 320, height: 460 });
       const d = pipWin.document;
       d.title = 'CircleChess';
+      const logoUrl = new URL('images/csoc.svg', window.location.href).href;
 
       const st = d.createElement('style');
       st.textContent = `
-        @import url('https://fonts.googleapis.com/css2?family=Lora:wght@600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@600;700;800;900&display=swap');
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-          background: linear-gradient(180deg, #0C0A09 0%, #1A1410 100%);
-          display: flex; flex-direction: column; height: 100%;
-          font-family: 'Inter', -apple-system, sans-serif; overflow: hidden;
-        }
-        .pip-bar {
-          display: flex; align-items: center; justify-content: space-between;
-          padding: 10px 14px 4px; flex-shrink: 0;
-        }
-        .pip-rec-badge {
-          display: flex; align-items: center; gap: 5px;
-          font-size: 10px; font-weight: 700; letter-spacing: 1.3px;
-          color: rgba(255,255,255,0.4); text-transform: uppercase;
-        }
-        .pip-rec-dot {
-          width: 6px; height: 6px; border-radius: 50%;
-          background: #E03030; flex-shrink: 0;
-          animation: pb 1s step-start infinite;
-        }
+        body { background: #FEF9EC; display: flex; flex-direction: column; height: 100%; font-family: 'Inter', -apple-system, sans-serif; overflow: hidden; }
+        .pip-bar { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px 6px; flex-shrink: 0; }
+        .pip-rec-badge { display: inline-flex; align-items: center; gap: 6px; background: rgba(240,160,32,0.15); border: 1.5px solid rgba(240,160,32,0.4); border-radius: 20px; padding: 5px 12px; font-size: 10px; font-weight: 800; letter-spacing: 1.2px; color: #9B6610; text-transform: uppercase; }
+        .pip-rec-dot { width: 7px; height: 7px; border-radius: 50%; background: #F0A020; flex-shrink: 0; animation: pb 1s step-start infinite; }
         @keyframes pb { 50% { opacity: 0; } }
-        .pip-brand { font-size: 11px; font-weight: 700; color: rgba(240,160,32,0.65); letter-spacing: 0.3px; }
-        .pip-timer {
-          font-family: 'Lora', Georgia, serif;
-          font-size: 48px; font-weight: 700; color: #E83030;
-          text-align: center; letter-spacing: -1px;
-          font-variant-numeric: tabular-nums;
-          padding: 2px 0 6px; flex-shrink: 0;
-          text-shadow: 0 0 28px rgba(230,48,48,0.4);
-        }
-        .pip-video {
-          flex: 1; width: 100%; display: block;
-          object-fit: contain; background: #000; min-height: 0;
-        }
-        .pip-stop {
-          flex-shrink: 0; width: 100%; padding: 16px 14px 24px;
-          border: none; cursor: pointer;
-          background: linear-gradient(180deg, #D43030 0%, #A82020 100%);
-          color: #fff; font-size: 13px; font-weight: 700;
-          letter-spacing: 0.5px; font-family: inherit;
-          transition: opacity 0.15s;
-        }
-        .pip-stop:hover { opacity: 0.85; }
-        .pip-stop:active { opacity: 0.7; }
-        .pip-warn {
-          position: fixed; inset: 0;
-          background: rgba(10,8,7,0.94);
-          display: none; flex-direction: column;
-          align-items: center; justify-content: center;
-          gap: 11px; padding: 18px; text-align: center;
-        }
+        .pip-logo { display: flex; align-items: center; gap: 5px; }
+        .pip-logo img { height: 22px; width: auto; }
+        .pip-logo-text { font-size: 13px; font-weight: 800; color: #1A1410; letter-spacing: -0.2px; }
+        .gold { color: #F0A020; }
+        .pip-timer-wrap { flex-shrink: 0; padding: 4px 14px 4px; display: flex; flex-direction: column; align-items: center; }
+        .pip-timer-row { display: flex; align-items: center; justify-content: center; gap: 10px; }
+        .pip-digits { display: flex; flex-direction: column; align-items: center; }
+        .pip-digit-group { display: flex; align-items: baseline; }
+        .pip-digit { font-size: 58px; font-weight: 900; color: #1A1410; letter-spacing: -2px; font-variant-numeric: tabular-nums; line-height: 1; min-width: 2ch; text-align: center; }
+        .pip-colon { font-size: 52px; font-weight: 900; color: #1A1410; padding: 0 1px; line-height: 1; }
+        .pip-labels { display: flex; width: 100%; padding: 3px 0 0; }
+        .pip-lbl { flex: 1; font-size: 9px; font-weight: 700; letter-spacing: 1.5px; color: #A09080; text-transform: uppercase; text-align: center; }
+        .pip-video { flex: 1; width: calc(100% - 20px); margin: 4px 10px; display: block; object-fit: contain; background: #1A1410; min-height: 0; border-radius: 14px; }
+        .pip-stop-wrap { flex-shrink: 0; padding: 8px 12px 14px; }
+        .pip-stop { width: 100%; padding: 14px; border: none; cursor: pointer; background: #F0A020; color: #1A1410; font-size: 14px; font-weight: 800; border-radius: 12px; font-family: inherit; display: flex; align-items: center; justify-content: center; gap: 9px; transition: background 0.15s; }
+        .pip-stop:hover { background: #D8901A; }
+        .pip-stop-sq { width: 12px; height: 12px; background: #1A1410; border-radius: 2px; flex-shrink: 0; }
+        .pip-warn { position: fixed; inset: 0; background: rgba(254,249,236,0.97); display: none; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 20px; text-align: center; }
         .pip-warn.on { display: flex; }
-        .pip-warn-icon { font-size: 28px; }
-        .pip-warn-title { color: #fff; font-size: 15px; font-weight: 800; letter-spacing: -0.2px; }
-        .pip-warn-msg { color: rgba(255,255,255,0.6); font-size: 12px; line-height: 1.6; }
-        .pip-warn-btns { display: flex; gap: 8px; width: 100%; margin-top: 4px; }
-        .pip-warn-no {
-          flex:1; padding: 11px 8px; cursor: pointer; font-family: inherit;
-          border: 1.5px solid rgba(255,255,255,0.22); background: transparent;
-          color: rgba(255,255,255,0.8); border-radius: 9px; font-size: 12px; font-weight: 700;
-        }
-        .pip-warn-no:hover { background: rgba(255,255,255,0.08); }
-        .pip-warn-yes {
-          flex:1; padding: 11px 8px; cursor: pointer; font-family: inherit;
-          border: none; background: #C83030; color: #fff;
-          border-radius: 9px; font-size: 12px; font-weight: 700;
-        }
-        .pip-warn-yes:hover { background: #A02020; }
+        .pip-warn-icon { font-size: 30px; }
+        .pip-warn-title { color: #1A1410; font-size: 15px; font-weight: 800; }
+        .pip-warn-msg { color: #6B6560; font-size: 12px; line-height: 1.6; }
+        .pip-warn-btns { display: flex; gap: 8px; width: 100%; margin-top: 6px; }
+        .pip-warn-no { flex:1; padding: 11px 8px; cursor: pointer; font-family: inherit; border: 1.5px solid #E6E0D8; background: #fff; color: #1A1410; border-radius: 9px; font-size: 12px; font-weight: 700; }
+        .pip-warn-no:hover { background: #F5F0E8; }
+        .pip-warn-yes { flex:1; padding: 11px 8px; cursor: pointer; font-family: inherit; border: none; background: #F0A020; color: #1A1410; border-radius: 9px; font-size: 12px; font-weight: 800; }
+        .pip-warn-yes:hover { background: #D8901A; }
       `;
       d.head.appendChild(st);
-      d.body.style.cssText = 'display:flex;flex-direction:column;height:100%;overflow:hidden;position:relative;';
+      d.body.style.cssText = 'display:flex;flex-direction:column;height:100%;overflow:hidden;';
 
-      const bar = d.createElement('div');
-      bar.className = 'pip-bar';
-      bar.innerHTML = '<div class="pip-rec-badge"><div class="pip-rec-dot"></div>REC</div><div class="pip-brand">CircleChess</div>';
-      d.body.appendChild(bar);
+      // Top bar
+      const bar = d.createElement('div'); bar.className = 'pip-bar';
+      const rec = d.createElement('div'); rec.className = 'pip-rec-badge';
+      const dot = d.createElement('div'); dot.className = 'pip-rec-dot';
+      rec.appendChild(dot); rec.appendChild(d.createTextNode('REC'));
+      const logo = d.createElement('div'); logo.className = 'pip-logo';
+      const li = d.createElement('img'); li.src = logoUrl;
+      const lt = d.createElement('div'); lt.className = 'pip-logo-text';
+      lt.innerHTML = 'Circle<span class="gold">Chess</span>';
+      logo.appendChild(li); logo.appendChild(lt);
+      bar.appendChild(rec); bar.appendChild(logo); d.body.appendChild(bar);
 
-      const tmr = d.createElement('div');
-      tmr.id = 'pip-tmr'; tmr.className = 'pip-timer';
-      tmr.textContent = '2:30';
-      d.body.appendChild(tmr);
+      // Timer: clock SVG + MM:SS + MIN/SEC labels
+      const tw = d.createElement('div'); tw.className = 'pip-timer-wrap';
+      const tr = d.createElement('div'); tr.className = 'pip-timer-row';
+      const NS = 'http://www.w3.org/2000/svg';
+      const clk = d.createElementNS(NS,'svg'); clk.setAttribute('width','32'); clk.setAttribute('height','32'); clk.setAttribute('viewBox','0 0 32 32'); clk.setAttribute('fill','none');
+      const cc = d.createElementNS(NS,'circle'); cc.setAttribute('cx','16'); cc.setAttribute('cy','16'); cc.setAttribute('r','12'); cc.setAttribute('stroke','#F0A020'); cc.setAttribute('stroke-width','2.2'); clk.appendChild(cc);
+      const cp = d.createElementNS(NS,'path'); cp.setAttribute('d','M16 9v7.5l4 2.5'); cp.setAttribute('stroke','#F0A020'); cp.setAttribute('stroke-width','2.2'); cp.setAttribute('stroke-linecap','round'); cp.setAttribute('stroke-linejoin','round'); clk.appendChild(cp);
+      const digs = d.createElement('div'); digs.className = 'pip-digits';
+      const dg = d.createElement('div'); dg.className = 'pip-digit-group';
+      const mmEl = d.createElement('span'); mmEl.id = 'pip-mm'; mmEl.className = 'pip-digit'; mmEl.textContent = '02';
+      const col = d.createElement('span'); col.className = 'pip-colon'; col.textContent = ':';
+      const ssEl = d.createElement('span'); ssEl.id = 'pip-ss'; ssEl.className = 'pip-digit'; ssEl.textContent = '30';
+      dg.appendChild(mmEl); dg.appendChild(col); dg.appendChild(ssEl);
+      const lbs = d.createElement('div'); lbs.className = 'pip-labels';
+      const ml = d.createElement('div'); ml.className = 'pip-lbl'; ml.textContent = 'MIN';
+      const sl = d.createElement('div'); sl.className = 'pip-lbl'; sl.textContent = 'SEC';
+      lbs.appendChild(ml); lbs.appendChild(sl);
+      digs.appendChild(dg); digs.appendChild(lbs);
+      tr.appendChild(clk); tr.appendChild(digs); tw.appendChild(tr); d.body.appendChild(tw);
 
+      // Camera video
       const vid = d.createElement('video');
       vid.autoplay = true; vid.muted = true; vid.playsInline = true;
-      vid.className = 'pip-video';
-      vid.srcObject = stream;
-      d.body.appendChild(vid);
-      vid.play().catch(() => {});
+      vid.className = 'pip-video'; vid.srcObject = stream;
+      d.body.appendChild(vid); vid.play().catch(() => {});
 
-      const btn = d.createElement('button');
-      btn.className = 'pip-stop';
-      btn.textContent = '■  Stop Recording';
-      btn.onclick = () => stopRec();
-      d.body.appendChild(btn);
+      // Stop button
+      const sw = d.createElement('div'); sw.className = 'pip-stop-wrap';
+      const btn = d.createElement('button'); btn.className = 'pip-stop';
+      const sq = d.createElement('div'); sq.className = 'pip-stop-sq';
+      btn.appendChild(sq); btn.appendChild(d.createTextNode(' Stop Recording'));
+      btn.onclick = () => stopRec(); sw.appendChild(btn); d.body.appendChild(sw);
 
-      // Warning overlay — shown inside PiP so user sees it while screen sharing
-      const warn = d.createElement('div');
-      warn.id = 'pip-warn'; warn.className = 'pip-warn';
-      warn.innerHTML = `
-        <div class="pip-warn-icon">⚠️</div>
-        <div class="pip-warn-title">Recording Too Short</div>
-        <div class="pip-warn-msg" id="pip-warn-msg">Please record at least 2:00.</div>
-        <div class="pip-warn-btns">
-          <button class="pip-warn-no" onclick="document.getElementById('pip-warn').classList.remove('on')">Keep Recording</button>
-          <button class="pip-warn-yes" onclick="document.getElementById('pip-warn').classList.remove('on');stopRec(true)">Stop Anyway</button>
-        </div>
-      `;
+      // Warning overlay (DOM methods — fixes stopRec(true) not firing from innerHTML onclick)
+      const warn = d.createElement('div'); warn.id = 'pip-warn'; warn.className = 'pip-warn';
+      const wi = d.createElement('div'); wi.className = 'pip-warn-icon'; wi.textContent = '⚠️';
+      const wt = d.createElement('div'); wt.className = 'pip-warn-title'; wt.textContent = 'Recording Too Short';
+      const wm = d.createElement('div'); wm.id = 'pip-warn-msg'; wm.className = 'pip-warn-msg'; wm.textContent = 'Please record at least 2:00.';
+      const wb = d.createElement('div'); wb.className = 'pip-warn-btns';
+      const wno = d.createElement('button'); wno.className = 'pip-warn-no'; wno.textContent = 'Keep Recording';
+      wno.onclick = () => warn.classList.remove('on');
+      const wyes = d.createElement('button'); wyes.className = 'pip-warn-yes'; wyes.textContent = 'Stop Anyway';
+      wyes.onclick = () => { warn.classList.remove('on'); stopRec(true); };
+      wb.appendChild(wno); wb.appendChild(wyes);
+      warn.appendChild(wi); warn.appendChild(wt); warn.appendChild(wm); warn.appendChild(wb);
       d.body.appendChild(warn);
 
       pipWin.addEventListener('pagehide', () => { pipWin = null; });
