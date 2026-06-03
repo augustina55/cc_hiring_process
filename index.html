@@ -914,6 +914,42 @@
     .v2-chk-row:has(input:checked) .v2-chk-indicator::after { opacity: 1; }
     .v2-setup-actions { display: flex; gap: 10px; justify-content: flex-end; align-items: center; }
 
+    /* ── Setup overlay — PiP-matched design ── */
+    #v2-setup {
+      position: fixed; inset: 0; background: #FEF9EC; z-index: 50;
+      overflow-y: auto; padding: 0;
+    }
+    .v2-setup-pip-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 20px 10px; border-bottom: 1.5px solid #E6E0D8;
+      background: #FEF9EC; position: sticky; top: 0; z-index: 10;
+    }
+    .v2-setup-pip-bar img { height: 30px; width: auto; }
+    .v2-setup-pip-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(240,160,32,0.15); border: 1.5px solid rgba(240,160,32,0.4);
+      border-radius: 20px; padding: 5px 13px;
+      font-size: 10px; font-weight: 800; letter-spacing: 1.2px;
+      color: #9B6610; text-transform: uppercase;
+    }
+    .v2-setup-pip-dot { width: 7px; height: 7px; border-radius: 50%; background: #F0A020; flex-shrink: 0; }
+    .v2-setup-inner { max-width: 540px; margin: 0 auto; padding: 22px 20px 32px; }
+    #v2-setup .v2-setup-topic-banner {
+      background: rgba(240,160,32,0.12); border-color: rgba(240,160,32,0.35);
+    }
+    #v2-setup .v2-setup-title { font-size: 18px; font-weight: 800; color: #1A1410; }
+    #v2-setup .v2-stp {
+      background: #fff; border-color: #E6E0D8; border-radius: 12px;
+    }
+    #v2-setup .v2-stp.done { border-color: #2A6E45; background: #FAFFFE; }
+    #v2-setup .v2-stp-num { background: rgba(240,160,32,0.15); color: #9B6610; }
+    #v2-setup .v2-stp.done .v2-stp-num { background: #EDFAF3; color: #2A6E45; }
+    #v2-setup .v2-stp-ico { background: rgba(240,160,32,0.15); }
+    #v2-setup .v2-stp-ico svg { color: #9B6610; }
+    #v2-setup .v2-stp.done .v2-stp-ico { background: #EDFAF3; }
+    #v2-setup .v2-stp.done .v2-stp-ico svg { color: #2A6E45; }
+    #v2-setup .v2-setup-actions { margin-top: 20px; }
+
     /* Rules view */
     .v2-eval-card {
       background: var(--white); border: 1.5px solid var(--border);
@@ -939,6 +975,14 @@
     #audio-device-sel { max-width: 160px; }
     #cam-device-sel   { flex: 1; }
     #audio-device-sel:focus, #cam-device-sel:focus { border-color: var(--orange); }
+    .f-err {
+      display: none;
+      font-size: 12px;
+      color: var(--req);
+      margin-top: 4px;
+      font-weight: 600;
+    }
+    .f-err.on { display: block; }
     input.inp-err {
       border-color: var(--req) !important;
       box-shadow: 0 0 0 3px rgba(224,64,64,0.12) !important;
@@ -1216,6 +1260,7 @@
                 <div class="inp-ico"></div>
                 <input type="text" id="f-name" placeholder="Enter your full name" oninput="filterTextOnly(this)" />
               </div>
+              <span class="f-err" id="err-name">Please enter your full name</span>
             </div>
             <!-- Email -->
             <div class="f-field">
@@ -1224,6 +1269,7 @@
                 <div class="inp-ico"></div>
                 <input type="email" id="f-email" placeholder="your@email.com" />
               </div>
+              <span class="f-err" id="err-email">Please enter a valid email address</span>
             </div>
             <!-- Phone -->
             <div class="f-field">
@@ -1232,6 +1278,7 @@
                 <div class="inp-ico"></div>
                 <input type="tel" id="f-phone" placeholder="Enter phone number" />
               </div>
+              <span class="f-err" id="err-phone">Please enter your phone number</span>
             </div>
             <!-- City -->
             <div class="f-field">
@@ -1240,6 +1287,7 @@
                 <div class="inp-ico"></div>
                 <input type="text" id="f-city" placeholder="City, Country" oninput="filterTextOnly(this)" />
               </div>
+              <span class="f-err" id="err-city">Please enter your city</span>
             </div>
           </div>
         </div>
@@ -1383,6 +1431,13 @@
 
         <!-- STATE 2: Setup -->
         <div id="v2-setup" style="display:none">
+          <div class="v2-setup-pip-bar">
+            <img src="images/cc.svg" alt="CircleChess" />
+            <div class="v2-setup-pip-badge">
+              <div class="v2-setup-pip-dot"></div>Setup
+            </div>
+          </div>
+          <div class="v2-setup-inner">
           <div class="v2-setup-topic-banner">
             <div class="v2-topic-ico"><img src="images/teaching.svg" alt="" /></div>
             <p>Choose any chess topic and teach it as if you are conducting a live class for 2 – 2.5 min</p>
@@ -1482,6 +1537,7 @@
               <span class="v2-rec-dot-btn"></span>Start Recording
             </button>
           </div>
+          </div><!-- /v2-setup-inner -->
         </div>
 
         <!-- STATE 3: Recording / Playback -->
@@ -1583,27 +1639,34 @@
   const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxoraWDXlBoXdXiN0A2-bIW9dBpnV3nM6HpV7cmRn9tM8ZJVV7iERIxsHInVuzEXJXs/exec';
 
   function validateStep1() {
-    const required = [
-      { id: 'f-name',   label: 'Full Name' },
-      { id: 'f-email',  label: 'Email ID' },
-      { id: 'f-phone',  label: 'Phone Number' },
-      { id: 'f-city',   label: 'City' },
+    const fields = [
+      { id: 'f-name',  err: 'err-name' },
+      { id: 'f-email', err: 'err-email' },
+      { id: 'f-phone', err: 'err-phone' },
+      { id: 'f-city',  err: 'err-city' },
     ];
-    for (const f of required) {
+    // clear previous errors
+    fields.forEach(f => { const e = document.getElementById(f.err); if (e) e.classList.remove('on'); });
+
+    let firstBad = null;
+    for (const f of fields) {
       const el = document.getElementById(f.id);
-      if (!el || !el.value.trim()) {
-        if (el) { el.focus(); el.classList.add('inp-err'); setTimeout(() => el.classList.remove('inp-err'), 1500); }
-        alert('"' + f.label + '" is required.');
-        return;
+      const errEl = document.getElementById(f.err);
+      const empty = !el || !el.value.trim();
+      const emailBad = f.id === 'f-email' && !empty && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(el.value.trim());
+      if (empty || emailBad) {
+        if (el) el.classList.add('inp-err');
+        if (errEl) errEl.classList.add('on');
+        if (!firstBad) firstBad = el;
       }
     }
-    const emailEl = document.getElementById('f-email');
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailEl.value.trim())) {
-      emailEl.focus(); emailEl.classList.add('inp-err');
-      setTimeout(() => emailEl.classList.remove('inp-err'), 1500);
-      alert('Please enter a valid email address.');
+    if (firstBad) {
+      firstBad.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      firstBad.focus();
       return;
     }
+    // clear inp-err on all fields before advancing
+    fields.forEach(f => { const el = document.getElementById(f.id); if (el) el.classList.remove('inp-err'); });
     goTo(2);
   }
 
@@ -1910,7 +1973,7 @@
       pipWin = await window.documentPictureInPicture.requestWindow({ width: 320, height: 460 });
       const d = pipWin.document;
       d.title = 'CircleChess';
-      const logoUrl = new URL('images/csoc.svg', window.location.href).href;
+      const logoUrl = new URL('images/cc.svg', window.location.href).href;
 
       const st = d.createElement('style');
       st.textContent = `
@@ -1958,10 +2021,8 @@
       const dot = d.createElement('div'); dot.className = 'pip-rec-dot';
       rec.appendChild(dot); rec.appendChild(d.createTextNode('REC'));
       const logo = d.createElement('div'); logo.className = 'pip-logo';
-      const li = d.createElement('img'); li.src = logoUrl;
-      const lt = d.createElement('div'); lt.className = 'pip-logo-text';
-      lt.innerHTML = 'Circle<span class="gold">Chess</span>';
-      logo.appendChild(li); logo.appendChild(lt);
+      const li = d.createElement('img'); li.src = logoUrl; li.style.height = '26px';
+      logo.appendChild(li);
       bar.appendChild(rec); bar.appendChild(logo); d.body.appendChild(bar);
 
       // Timer: clock SVG + MM:SS + MIN/SEC labels
