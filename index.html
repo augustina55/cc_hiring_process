@@ -77,7 +77,7 @@
       position: relative;
     }
     .l-logo img {
-      height: 30px;
+      height: 40px;
       width: auto;
       filter: none;
     }
@@ -963,7 +963,7 @@
     .v2-cam-body {
       display: flex; align-items: center; gap: 14px;
     }
-    .v2-cam-controls { flex-shrink: 0; }
+    .v2-cam-controls { flex-shrink: 0; display: flex; flex-direction: column; gap: 8px; justify-content: center; }
     .v2-cam-preview-box {
       flex: 1; aspect-ratio: 1/1; border-radius: 10px; overflow: hidden;
       background: #1A1410; position: relative;
@@ -983,7 +983,7 @@
       border-radius: 12px; padding: 14px 18px; margin-bottom: 16px;
     }
     .v2-setup-topic-banner p {
-      margin: 0; font-size: 14.5px; font-weight: 600; color: var(--text); line-height: 1.5;
+      margin: 0; font-size: 16px; font-weight: 700; color: var(--text); line-height: 1.5;
     }
     .v2-setup-hdr { margin-bottom: 14px; }
     .v2-setup-title { font-size: 16px; font-weight: 800; color: var(--text); margin-bottom: 3px; }
@@ -1381,11 +1381,10 @@
         <div id="v2-setup" style="display:none">
           <div class="v2-setup-topic-banner">
             <div class="v2-topic-ico"><img src="images/teaching.svg" alt="" /></div>
-            <p>Choose any chess topic and teach it as if you are conducting a live class.</p>
+            <p>Choose any chess topic and teach it as if you are conducting a live class for 2 – 2.5 min</p>
           </div>
           <div class="v2-setup-hdr">
             <div class="v2-setup-title">Let's Setup</div>
-            <div class="v2-setup-sub">Check your microphone and camera before recording</div>
           </div>
 
           <!-- 1. Audio -->
@@ -1448,19 +1447,7 @@
               <div class="v2-stp-tick" id="tick-cam"></div>
             </div>
             <div class="v2-stp-body" id="body-cam">
-              <div class="v2-device-row">
-                <svg width="14" height="14" viewBox="0 0 22 18" fill="none" style="flex-shrink:0;color:var(--sub)">
-                  <rect x="1" y="3" width="14" height="12" rx="2.5" stroke="currentColor" stroke-width="1.6"/>
-                  <path d="M15 7.5l5.5-3v9L15 10.5" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
-                </svg>
-                <select id="cam-device-sel" onchange="changeCamDevice()">
-                  <option value="">Select a camera…</option>
-                </select>
-              </div>
               <div class="v2-cam-body">
-                <div class="v2-cam-controls">
-                  <button class="btn-back" id="btn-cam-test" onclick="startCamTest()">Test Camera</button>
-                </div>
                 <div class="v2-cam-preview-box" id="cam-preview-box">
                   <video id="setup-cam-preview" autoplay muted playsinline></video>
                   <div class="v2-cam-placeholder" id="cam-placeholder">
@@ -1469,6 +1456,18 @@
                       <path d="M15 7.5l5.5-3v9L15 10.5" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
                     </svg>
                   </div>
+                </div>
+                <div class="v2-cam-controls">
+                  <div class="v2-device-row" style="margin-bottom:8px">
+                    <svg width="14" height="14" viewBox="0 0 22 18" fill="none" style="flex-shrink:0;color:var(--sub)">
+                      <rect x="1" y="3" width="14" height="12" rx="2.5" stroke="currentColor" stroke-width="1.6"/>
+                      <path d="M15 7.5l5.5-3v9L15 10.5" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+                    </svg>
+                    <select id="cam-device-sel" onchange="changeCamDevice()">
+                      <option value="">Select a camera…</option>
+                    </select>
+                  </div>
+                  <button class="btn-back" id="btn-cam-test" onclick="startCamTest()">Test Camera</button>
                 </div>
               </div>
             </div>
