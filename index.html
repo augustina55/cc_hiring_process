@@ -1878,7 +1878,7 @@
   async function openDocumentPiP(stream) {
     if (!window.documentPictureInPicture) return;
     try {
-      pipWin = await window.documentPictureInPicture.requestWindow({ width: 300, height: 340 });
+      pipWin = await window.documentPictureInPicture.requestWindow({ width: 300, height: 380 });
       const d = pipWin.document;
       d.title = 'CircleChess';
 
@@ -1920,7 +1920,7 @@
           object-fit: contain; background: #000; min-height: 0;
         }
         .pip-stop {
-          flex-shrink: 0; width: 100%; padding: 14px 14px 18px;
+          flex-shrink: 0; width: 100%; padding: 16px 14px 24px;
           border: none; cursor: pointer;
           background: linear-gradient(180deg, #D43030 0%, #A82020 100%);
           color: #fff; font-size: 13px; font-weight: 700;
