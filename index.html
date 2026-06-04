@@ -1705,6 +1705,33 @@
   const TOTAL = 150, CIRC = 188.5;
   let ticks = { audio: false, cam: false };
 
+  /* transcript */
+  let recognition = null, recognitionActive = false, recordedTranscript = '';
+
+  function startTranscription() {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) return;
+    recognition = new SR();
+    recognition.continuous = true;
+    recognition.interimResults = false;
+    recognition.lang = 'en-US';
+    recordedTranscript = '';
+    recognition.onresult = e => {
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        if (e.results[i].isFinal) recordedTranscript += e.results[i][0].transcript + ' ';
+      }
+    };
+    recognition.onerror = e => { if (e.error !== 'no-speech') console.warn('SR:', e.error); };
+    recognition.onend = () => { if (recognitionActive) try { recognition.start(); } catch(e){} };
+    recognitionActive = true;
+    try { recognition.start(); } catch(e) {}
+  }
+
+  function stopTranscription() {
+    recognitionActive = false;
+    if (recognition) { try { recognition.stop(); } catch(e){} recognition = null; }
+  }
+
   function getSupportedMimeType() {
     const types = ['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm','video/mp4'];
     for (const t of types) { try { if (MediaRecorder.isTypeSupported(t)) return t; } catch(e){} }
@@ -2157,6 +2184,7 @@
         showRecordedDuration();
       };
       mr.start(1000);
+      startTranscription();
 
       const liveBadge = document.getElementById('rec-live-badge');
       if (liveBadge) liveBadge.style.display = 'flex';
@@ -2183,11 +2211,14 @@
     }
     clearInterval(ti);
     cancelAnimationFrame(rafId); rafId = null;
+    stopTranscription();
     if (pipWin) { try { pipWin.close(); } catch(e){} pipWin = null; }
     if (document.pictureInPictureElement) document.exitPictureInPicture().catch(() => {});
     if (mr && mr.state !== 'inactive') mr.stop();
     if (screenStream) { screenStream.getTracks().forEach(t => t.stop()); screenStream = null; }
     if (camStream)    { camStream.getTracks().forEach(t => t.stop()); camStream = null; }
+    // Bring main tab to focus (important when stopping from PiP or auto-stop)
+    try { window.focus(); } catch(e) {}
   }
 
   function showStopWarning() {
@@ -2228,6 +2259,7 @@
   function retakeRec() {
     cancelAnimationFrame(rafId); rafId = null;
     clearInterval(ti);
+    stopTranscription(); recordedTranscript = '';
     if (pipWin) { try { pipWin.close(); } catch(e){} pipWin = null; }
     if (document.pictureInPictureElement) document.exitPictureInPicture().catch(() => {});
     if (mr && mr.state !== 'inactive') mr.stop();
@@ -2482,7 +2514,8 @@
           timing:         document.getElementById('f-timing').value,
           experience:     document.getElementById('f-exp').value,
           videoUrl,
-          submissionType: uploadedVideoBlob instanceof File ? 'uploaded' : 'recorded'
+          submissionType: uploadedVideoBlob instanceof File ? 'uploaded' : 'recorded',
+          transcript:     recordedTranscript.trim() || ''
         }),
         redirect: 'follow'
       });
