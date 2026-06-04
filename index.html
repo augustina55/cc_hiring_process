@@ -1621,7 +1621,7 @@
 
 <script>
   
-  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxoraWDXlBoXdXiN0A2-bIW9dBpnV3nM6HpV7cmRn9tM8ZJVV7iERIxsHInVuzEXJXs/exec';
+  const SCRIPT_URL = '/api/submit';
 
   function validateStep1() {
     const fields = [
@@ -2454,8 +2454,8 @@
       alert('Please record or upload your teaching demo video before submitting.');
       return;
     }
-    if (!SCRIPT_URL || SCRIPT_URL.startsWith('YOUR_')) {
-      alert('Submission is not configured yet.\nContact the administrator to set up the Apps Script URL.');
+    if (!SCRIPT_URL) {
+      alert('Submission is not configured yet.\nContact the administrator.');
       return;
     }
 
