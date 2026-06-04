@@ -1678,7 +1678,7 @@
       setTimeout(() => input.classList.remove('inp-err'), 500);
     }
   }
-  const CHUNK_SIZE  = 2 * 1024 * 1024; // 2 MB per chunk
+  const CHUNK_SIZE  = 3 * 1024 * 1024; // 3 MB — must be multiple of 3 bytes for clean base64
 
   let cur = 1;
   let uploadedVideoBlob = null, uploadedVideoType = 'video/webm';
@@ -2403,7 +2403,7 @@
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify({
         action: 'finalize', uploadId,
-        mimeType: blob.type || 'video/mp4',
+        mimeType: (blob.type || 'video/mp4').split(';')[0],
         applicantName
       }),
       redirect: 'follow'
