@@ -1546,11 +1546,7 @@
               <button class="rec-pip-stop" id="btn-stop" onclick="stopRec()">&#9632; Stop Recording</button>
             </div>
           </div>
-          <div id="tx-status" style="display:none;align-items:center;gap:8px;font-size:12px;color:var(--sub);margin-top:10px;justify-content:center;">
-            <div style="width:6px;height:6px;border-radius:50%;background:var(--orange);animation:pb 1s step-start infinite;"></div>
-            Transcribing audio…
-          </div>
-          <div class="rec-controls" style="margin-top:12px;justify-content:center">
+<div class="rec-controls" style="margin-top:12px;justify-content:center">
             <button class="btn-back" id="btn-retake" style="display:none" onclick="retakeRec()">&#8635; Retake</button>
             <button class="btn-cta" id="btn-submit-rec" style="display:none" onclick="submitApp()">
               Submit Application <span class="btn-cta-arrow">&#8594;</span>
@@ -1709,42 +1705,33 @@
   const TOTAL = 150, CIRC = 188.5;
   let ticks = { audio: false, cam: false };
 
-  /* transcript — audio-only recorder → Whisper */
-  let audioRec = null, audioChunks = [], recordedTranscript = '';
+  /* transcript — Web Speech API (free, real-time, no external API) */
+  let recognition = null, transcriptParts = [], recordedTranscript = '', recActive = false;
 
-  function startAudioCapture(micTracks) {
-    try {
-      const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-        ? 'audio/webm;codecs=opus' : 'audio/webm';
-      audioChunks = []; recordedTranscript = '';
-      audioRec = new MediaRecorder(new MediaStream(micTracks), { mimeType: mime, audioBitsPerSecond: 32000 });
-      audioRec.ondataavailable = e => { if (e.data.size) audioChunks.push(e.data); };
-      audioRec.onstop = () => {
-        const blob = new Blob(audioChunks, { type: audioRec.mimeType || 'audio/webm' });
-        transcribeRecording(blob);
-      };
-      audioRec.start(1000);
-    } catch(e) { audioRec = null; }
+  function startAudioCapture() {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) return;
+    transcriptParts = []; recordedTranscript = ''; recActive = true;
+    recognition = new SR();
+    recognition.continuous = true;
+    recognition.interimResults = false;
+    recognition.lang = 'en-US';
+    recognition.onresult = e => {
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        if (e.results[i].isFinal) transcriptParts.push(e.results[i][0].transcript.trim());
+      }
+      recordedTranscript = transcriptParts.join(' ');
+    };
+    recognition.onend = () => {
+      if (recActive) try { recognition.start(); } catch(e) {}
+    };
+    recognition.onerror = () => {};
+    try { recognition.start(); } catch(e) {}
   }
 
   function stopAudioCapture() {
-    if (audioRec && audioRec.state !== 'inactive') audioRec.stop();
-  }
-
-  async function transcribeRecording(blob) {
-    const el = document.getElementById('tx-status');
-    if (el) el.style.display = 'flex';
-    try {
-      const b64raw = await blobToBase64(blob);
-      const audio  = b64raw.includes(',') ? b64raw.split(',')[1] : b64raw;
-      const resp   = await fetch('/api/transcribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ audio, mimeType: (blob.type || 'audio/webm').split(';')[0] })
-      });
-      if (resp.ok) { const d = await resp.json(); recordedTranscript = d.transcript || ''; }
-    } catch(e) { recordedTranscript = ''; }
-    if (el) el.style.display = 'none';
+    recActive = false;
+    if (recognition) { try { recognition.stop(); } catch(e) {} recognition = null; }
   }
 
   function getSupportedMimeType() {
@@ -2199,7 +2186,7 @@
         showRecordedDuration();
       };
       mr.start(1000);
-      startAudioCapture(micStream.getAudioTracks());
+      startAudioCapture();
 
       const liveBadge = document.getElementById('rec-live-badge');
       if (liveBadge) liveBadge.style.display = 'flex';
@@ -2274,7 +2261,7 @@
   function retakeRec() {
     cancelAnimationFrame(rafId); rafId = null;
     clearInterval(ti);
-    stopAudioCapture(); audioChunks = []; recordedTranscript = '';
+    stopAudioCapture(); transcriptParts = []; recordedTranscript = '';
     if (pipWin) { try { pipWin.close(); } catch(e){} pipWin = null; }
     if (document.pictureInPictureElement) document.exitPictureInPicture().catch(() => {});
     if (mr && mr.state !== 'inactive') mr.stop();
