@@ -2402,10 +2402,12 @@
     });
   }
 
-  /* chunked video upload to Apps Script / Drive */
+  /* chunked video upload — 3 parallel at a time */
   async function uploadVideoChunked(blob, uploadId, applicantName) {
     const total = Math.ceil(blob.size / CHUNK_SIZE);
-    for (let i = 0; i < total; i++) {
+    const BATCH = 3;
+
+    async function uploadOne(i) {
       const slice = blob.slice(i * CHUNK_SIZE, Math.min((i + 1) * CHUNK_SIZE, blob.size));
       const b64   = await blobToBase64(slice);
       const chunk = b64.includes(',') ? b64.split(',')[1] : b64;
@@ -2416,7 +2418,12 @@
         redirect: 'follow'
       });
       if (!resp.ok) throw new Error('Upload interrupted at chunk ' + i);
-      updateProgress(5 + ((i + 1) / total) * 65);
+    }
+
+    for (let i = 0; i < total; i += BATCH) {
+      const end = Math.min(i + BATCH, total);
+      await Promise.all(Array.from({ length: end - i }, (_, j) => uploadOne(i + j)));
+      updateProgress(5 + (end / total) * 65);
     }
     const fr = await fetch(SCRIPT_URL, {
       method: 'POST',
