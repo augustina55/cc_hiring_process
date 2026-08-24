@@ -1247,92 +1247,14 @@
               </div>
               <span class="f-err" id="err-name">Please enter your full name</span>
             </div>
-            <!-- Email -->
-            <div class="f-field">
-              <label class="f-label">Email ID <span class="req">*</span></label>
-              <div class="inp-wrap">
-                <div class="inp-ico"></div>
-                <input type="email" id="f-email" placeholder="your@email.com" />
-              </div>
-              <span class="f-err" id="err-email">Please enter a valid email address</span>
-            </div>
             <!-- Phone -->
             <div class="f-field">
-              <label class="f-label">Phone No. <span class="req">*</span></label>
+              <label class="f-label">Mobile Number <span class="req">*</span></label>
               <div class="inp-wrap">
                 <div class="inp-ico"></div>
-                <input type="tel" id="f-phone" placeholder="Enter phone number" />
+                <input type="tel" id="f-phone" placeholder="Enter mobile number" />
               </div>
-              <span class="f-err" id="err-phone">Please enter your phone number</span>
-            </div>
-            <!-- City -->
-            <div class="f-field">
-              <label class="f-label">Which city are you based out of? <span class="req">*</span></label>
-              <div class="inp-wrap">
-                <div class="inp-ico"></div>
-                <input type="text" id="f-city" placeholder="City, Country" oninput="filterTextOnly(this)" />
-              </div>
-              <span class="f-err" id="err-city">Please enter your city</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Card 2: Chess Background -->
-        <div class="sec-card">
-          <div class="sec-head">
-            <div class="sec-ico blue"><img src="images/exp.svg" alt="" /></div>
-            <div class="sec-head-text">
-              <h3>Chess Background</h3>
-            </div>
-          </div>
-          <div class="f-grid">
-            <!-- FIDE Rating -->
-            <div class="f-field">
-              <label class="f-label">FIDE Rating <span class="req">*</span></label>
-              <div class="inp-wrap">
-                <div class="inp-ico"></div>
-                <input type="text" id="f-rating" placeholder="e.g. 1850 — or NA if unrated" />
-              </div>
-            </div>
-            <!-- FIDE ID -->
-            <div class="f-field">
-              <label class="f-label">FIDE ID <span class="opt">(optional)</span></label>
-              <div class="inp-wrap">
-                <div class="inp-ico"></div>
-                <input type="number" id="f-fideid" placeholder="e.g. 5000017" min="0" step="1" />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Card 3: Availability & Experience -->
-        <div class="sec-card">
-          <div class="sec-head">
-            <div class="sec-ico green"><img src="images/calendar.svg" alt="" /></div>
-            <div class="sec-head-text">
-              <h3>Availability &amp; Experience</h3>
-            </div>
-          </div>
-          <div class="f-grid">
-            <!-- Availability -->
-            <div class="f-field">
-              <label class="f-label">What are the timings you are available for? <span class="req">*</span></label>
-              <select id="f-timing">
-                <option value="" disabled selected>Select availability</option>
-                <option value="fulltime">Full Time</option>
-                <option value="morning">Morning  (3 am – 8 am)</option>
-                <option value="evening">Evening  (5 pm – 8 pm)</option>
-                <option value="night">Night  (9 pm – 1 am)</option>
-              </select>
-            </div>
-            <!-- Experience -->
-            <div class="f-field">
-              <label class="f-label">Years of coaching experience <span class="req">*</span></label>
-              <div class="inp-wrap">
-                <div class="inp-ico"></div>
-                <input type="number" id="f-exp" min="0" max="60" placeholder="e.g. 3" />
-              </div>
-              <span style="font-size:12px;color:var(--sub);margin-top:2px">Enter 0 if you are just starting out.</span>
+              <span class="f-err" id="err-phone">Please enter your mobile number</span>
             </div>
           </div>
         </div>
@@ -1376,6 +1298,14 @@
                 <li>Energy &amp; enthusiasm</li>
                 <li>Professional setup</li>
               </ul>
+              <p style="font-size:12.5px;color:var(--sub);margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">You can explain any of these topics of your choice</p>
+              <ul class="v2-check-list v2-rules-list" style="margin-top:8px">
+                <li>Casting</li>
+                <li>Pin</li>
+                <li>Skewer</li>
+                <li>Discovered attack</li>
+                <li>Forced moves</li>
+              </ul>
             </div>
           </div>
 
@@ -1389,7 +1319,7 @@
                 </svg>
                 <div>
                   <div class="v2-uc-title">Upload a File Instead</div>
-                  <div class="v2-uc-sub">MP4 preferred &nbsp;·&nbsp; Max 200 MB</div>
+                  <div class="v2-uc-sub">MP4 preferred &nbsp;·&nbsp; Max 200 MB &nbsp;·&nbsp; Up to 5 min</div>
                 </div>
               </div>
               <div class="v2-file-ok" id="v2-file-ok">
@@ -1566,7 +1496,7 @@
         <h2>Application Submitted</h2>
         <p>Thank you for applying to become a CircleChess coach. Our team will review your application and respond within 3–5 business days.</p>
         <div class="app-id-box">Application ID &nbsp;—&nbsp; <strong id="app-id-val"></strong></div>
-        <div class="success-note">Confirmation will be sent to <strong id="email-conf"></strong></div>
+        <div class="success-note">We'll reach out on <strong id="email-conf"></strong></div>
       </div>
 
     </div>
@@ -1626,9 +1556,7 @@
   function validateStep1() {
     const fields = [
       { id: 'f-name',  err: 'err-name' },
-      { id: 'f-email', err: 'err-email' },
       { id: 'f-phone', err: 'err-phone' },
-      { id: 'f-city',  err: 'err-city' },
     ];
     // clear previous errors
     fields.forEach(f => { const e = document.getElementById(f.err); if (e) e.classList.remove('on'); });
@@ -1638,8 +1566,7 @@
       const el = document.getElementById(f.id);
       const errEl = document.getElementById(f.err);
       const empty = !el || !el.value.trim();
-      const emailBad = f.id === 'f-email' && !empty && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(el.value.trim());
-      if (empty || emailBad) {
+      if (empty) {
         if (el) el.classList.add('inp-err');
         if (errEl) errEl.classList.add('on');
         if (!firstBad) firstBad = el;
@@ -2334,6 +2261,15 @@
         const subBtn = document.getElementById('btn-submit-upload');
         if (recBtn) { recBtn.disabled = false; recBtn.style.opacity = ''; }
         if (subBtn) subBtn.style.display = 'none';
+      } else if (dur > 300) {
+        metaEl.textContent = sizeMB + ' MB  ·  ' + durStr + '  —  Too long (maximum 5 minutes)';
+        metaEl.className   = 'v2-file-meta err';
+        okBox.classList.add('err');
+        uploadedVideoBlob = null;
+        const recBtn = document.getElementById('btn-start-rec');
+        const subBtn = document.getElementById('btn-submit-upload');
+        if (recBtn) { recBtn.disabled = false; recBtn.style.opacity = ''; }
+        if (subBtn) subBtn.style.display = 'none';
       } else {
         metaEl.textContent = sizeMB + ' MB  ·  ' + durStr;
         metaEl.className   = 'v2-file-meta ok';
@@ -2473,12 +2409,7 @@
   async function doSubmitApp() {
     const required = [
       { id: 'f-name',        label: 'Full Name' },
-      { id: 'f-email',       label: 'Email ID' },
-      { id: 'f-phone',       label: 'Phone Number' },
-      { id: 'f-city',        label: 'City' },
-      { id: 'f-rating', label: 'FIDE Rating' },
-      { id: 'f-timing',      label: 'Availability' },
-      { id: 'f-exp',         label: 'Years of Experience' },
+      { id: 'f-phone',       label: 'Mobile Number' },
     ];
     for (const { id, label } of required) {
       const el = document.getElementById(id);
@@ -2511,13 +2442,7 @@
         body: JSON.stringify({
           action:         'submit',
           name,
-          email:          document.getElementById('f-email').value.trim(),
           phone:          document.getElementById('f-phone').value.trim(),
-          city:           document.getElementById('f-city').value.trim(),
-          fideRating:     document.getElementById('f-rating').value.trim(),
-          fideId:         (document.getElementById('f-fideid') || {}).value || '—',
-          timing:         document.getElementById('f-timing').value,
-          experience:     document.getElementById('f-exp').value,
           videoUrl,
           submissionType: uploadedVideoBlob instanceof File ? 'uploaded' : 'recorded',
           transcript:     recordedTranscript.trim() || ''
@@ -2530,10 +2455,10 @@
       updateProgress(100, 'Done!');
       setTimeout(() => {
         hideProgress();
-        const email = document.getElementById('f-email').value.trim() || 'your email address';
+        const phone = document.getElementById('f-phone').value.trim();
         const id    = 'CC-' + Math.random().toString(36).toUpperCase().slice(2, 8);
         document.getElementById('app-id-val').textContent  = id;
-        document.getElementById('email-conf').textContent  = email;
+        document.getElementById('email-conf').textContent  = phone;
         document.getElementById('panel-2').classList.remove('active');
         ['ls-2','ls-3'].forEach(id => {
           const el = document.getElementById(id);
