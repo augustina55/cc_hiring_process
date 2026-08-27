@@ -106,9 +106,12 @@ function finalizeUpload(data) {
       const b = chunkMap[i].getBlob().getBytes();
       parts.push(b); total += b.length;
     }
-    const all = new Array(total);
+    // Uint8Array.set() is a bulk native copy — a manual per-byte loop here
+    // was slow enough on larger (~5 min) videos to blow past the function
+    // timeout, which is what surfaced as a 500 on the upload finalize call.
+    const all = new Uint8Array(total);
     let off = 0;
-    for (const b of parts) { for (let i = 0; i < b.length; i++) all[off++] = b[i]; }
+    for (const b of parts) { all.set(b, off); off += b.length; }
     for (const i of indices) chunkMap[i].setTrashed(true);
 
     const mime  = data.mimeType || 'video/mp4';
