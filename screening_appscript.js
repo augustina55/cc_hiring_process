@@ -100,26 +100,63 @@ function finalizeUpload(data) {
     const indices = Object.keys(chunkMap).map(Number).sort((a, b) => a - b);
     if (!indices.length) return jsonResp({ ok: false, error: 'No chunks found' });
 
-    const parts = [];
-    let total = 0;
-    for (const i of indices) {
-      const b = chunkMap[i].getBlob().getBytes();
-      parts.push(b); total += b.length;
-    }
-    // Uint8Array.set() is a bulk native copy — a manual per-byte loop here
-    // was slow enough on larger (~5 min) videos to blow past the function
-    // timeout, which is what surfaced as a 500 on the upload finalize call.
-    const all = new Uint8Array(total);
-    let off = 0;
-    for (const b of parts) { all.set(b, off); off += b.length; }
-    for (const i of indices) chunkMap[i].setTrashed(true);
+    let totalSize = 0;
+    for (const i of indices) totalSize += chunkMap[i].getSize();
 
     const mime  = data.mimeType || 'video/mp4';
     const ext   = mime.includes('webm') ? 'webm' : mime.includes('quicktime') ? 'mov' : 'mp4';
     const safe  = (data.applicantName || 'applicant').replace(/[^a-zA-Z0-9 _-]/g, '_');
     const fname = safe + '_' + Utilities.formatDate(new Date(), 'UTC', 'yyyy-MM-dd') + '.' + ext;
 
-    const file = videoFolder.createFile(Utilities.newBlob(all, mime, fname));
+    // Utilities.newBlob() caps out around 50MB, so a video of any real
+    // length can never be assembled into a single in-memory blob. Instead,
+    // stream the (already ≤3MB) chunk files straight into Drive via a
+    // resumable upload session — each PUT stays small regardless of the
+    // total file size.
+    const token = ScriptApp.getOAuthToken();
+    const initResp = UrlFetchApp.fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable', {
+      method: 'post',
+      contentType: 'application/json',
+      headers: { Authorization: 'Bearer ' + token },
+      payload: JSON.stringify({ name: fname, parents: [videoFolder.getId()], mimeType: mime }),
+      muteHttpExceptions: true
+    });
+    if (initResp.getResponseCode() !== 200) {
+      throw new Error('Could not start resumable upload: ' + initResp.getContentText());
+    }
+    const uploadUrl = initResp.getHeaders()['Location'] || initResp.getHeaders()['location'];
+    if (!uploadUrl) throw new Error('Resumable upload session had no Location header');
+
+    let offset = 0, fileId = null;
+    for (const i of indices) {
+      const chunkBlob = chunkMap[i].getBlob();
+      const size  = chunkBlob.getBytes().length;
+      const start = offset, end = offset + size - 1;
+      const isLast = (i === indices[indices.length - 1]);
+
+      const putResp = UrlFetchApp.fetch(uploadUrl, {
+        method: 'put',
+        headers: { 'Content-Range': 'bytes ' + start + '-' + end + '/' + totalSize },
+        payload: chunkBlob,
+        muteHttpExceptions: true
+      });
+      const code = putResp.getResponseCode();
+      offset += size;
+
+      if (isLast) {
+        if (code !== 200 && code !== 201) {
+          throw new Error('Resumable upload did not complete: ' + putResp.getContentText());
+        }
+        fileId = JSON.parse(putResp.getContentText()).id;
+      } else if (code !== 308) {
+        throw new Error('Resumable upload chunk failed at index ' + i + ': ' + putResp.getContentText());
+      }
+    }
+    if (!fileId) throw new Error('Resumable upload finished without a file id');
+
+    for (const i of indices) chunkMap[i].setTrashed(true);
+
+    const file = DriveApp.getFileById(fileId);
     file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
 
     return jsonResp({ ok: true, url: 'https://drive.google.com/file/d/' + file.getId() + '/view' });
