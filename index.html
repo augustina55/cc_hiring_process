@@ -2381,17 +2381,28 @@
       }
     }
     await Promise.all(Array.from({ length: Math.min(CONCURRENCY, total) }, worker));
-    const fr = await fetch(SCRIPT_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({
-        action: 'finalize', uploadId,
-        mimeType: (blob.type || 'video/mp4').split(';')[0],
-        applicantName
-      }),
-      redirect: 'follow'
-    });
-    const fd = await fr.json();
+
+    let fd, lastFinalizeErr;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const fr = await fetch(SCRIPT_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({
+            action: 'finalize', uploadId,
+            mimeType: (blob.type || 'video/mp4').split(';')[0],
+            applicantName
+          }),
+          redirect: 'follow'
+        });
+        fd = await fr.json();
+        lastFinalizeErr = null;
+        break;
+      } catch (e) {
+        lastFinalizeErr = e;
+      }
+    }
+    if (lastFinalizeErr) throw new Error('Could not finalize the video upload. Please try again.');
     if (!fd.ok) throw new Error(fd.error || 'Could not save video to Drive');
     updateProgress(80);
     return fd.url;
