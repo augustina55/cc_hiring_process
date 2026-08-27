@@ -1,18 +1,18 @@
 const SHEET_ID     = '1cr_poEvii21bVATswTJizDBa2bHT4AS6vQugANCy7Po';
 const VIDEO_FOLDER = 'cc_hiring_videos';
 const TEMP_FOLDER  = 'cc_hiring_temp';
-// Set via: Project Settings > Script Properties > OPENAI_API_KEY
-const OPENAI_API_KEY = PropertiesService.getScriptProperties().getProperty('OPENAI_API_KEY');
+// Set via: Project Settings > Script Properties > GROQ_API_KEY
+const GROQ_API_KEY = PropertiesService.getScriptProperties().getProperty('GROQ_API_KEY');
 const SHEET_NAME = "Sheet1";
 
-function testOpenAI() {
+function testGroq() {
 
   const response = UrlFetchApp.fetch(
-    "https://api.openai.com/v1/models",
+    "https://api.groq.com/openai/v1/models",
     {
       method: "get",
       headers: {
-        Authorization: "Bearer " + OPENAI_API_KEY
+        Authorization: "Bearer " + GROQ_API_KEY
       },
       muteHttpExceptions: true
     }
@@ -227,14 +227,14 @@ function transcribeVideo(fileId) {
   const blob = file.getBlob();
 
   const response = UrlFetchApp.fetch(
-    "https://api.openai.com/v1/audio/transcriptions",
+    "https://api.groq.com/openai/v1/audio/transcriptions",
     {
       method: "post",
       headers: {
-        Authorization: "Bearer " + OPENAI_API_KEY
+        Authorization: "Bearer " + GROQ_API_KEY
       },
       payload: {
-        model: "gpt-4o-mini-transcribe",
+        model: "whisper-large-v3-turbo",
         file: blob
       },
       muteHttpExceptions: true
@@ -324,7 +324,7 @@ ${transcript}
 `;
 
   const payload = {
-    model: "gpt-4.1-mini",
+    model: "llama-3.3-70b-versatile",
     response_format: {
       type: "json_object"
     },
@@ -338,11 +338,11 @@ ${transcript}
   };
 
   const response = UrlFetchApp.fetch(
-    "https://api.openai.com/v1/chat/completions",
+    "https://api.groq.com/openai/v1/chat/completions",
     {
       method: "post",
       headers: {
-        Authorization: "Bearer " + OPENAI_API_KEY,
+        Authorization: "Bearer " + GROQ_API_KEY,
         "Content-Type": "application/json"
       },
       payload: JSON.stringify(payload)
