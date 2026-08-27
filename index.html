@@ -1461,7 +1461,7 @@
             <div class="v2-rec-live-badge" id="rec-live-badge" style="display:none">
               <div class="v2-screen-badge-dot"></div>REC
             </div>
-            <div class="v2-rec-main-timer" id="rec-timer-main">2:30</div>
+            <div class="v2-rec-main-timer" id="rec-timer-main">5:00</div>
             <div style="font-size:11px;font-weight:700;color:var(--sub);letter-spacing:0.5px;text-transform:uppercase;white-space:nowrap" id="rec-timer-label">Remaining</div>
           </div>
           <div class="v2-rec-screen-area" id="rec-screen-area">
@@ -1471,7 +1471,7 @@
             </div>
             <!-- Floating camera: timer above, stop below -->
             <div class="rec-cam-pip" id="rec-cam-pip" style="display:none">
-              <div class="rec-pip-timer" id="pip-timer">2:30</div>
+              <div class="rec-pip-timer" id="pip-timer">5:00</div>
               <video id="rec-cam-float" autoplay muted playsinline></video>
               <button class="rec-pip-stop" id="btn-stop" onclick="stopRec()">&#9632; Stop Recording</button>
             </div>
@@ -1629,7 +1629,7 @@
   let pipWin = null;
   let audioCtx = null, analyser = null, audioTestRafId = null;
   let screenStream = null, camStream = null, rafId = null;
-  const TOTAL = 150, CIRC = 188.5;
+  const TOTAL = 300, CIRC = 188.5;
   let ticks = { audio: false, cam: false };
 
   /* transcript — Web Speech API (free, real-time, no external API) */
@@ -2348,17 +2348,39 @@
       const slice = blob.slice(i * CHUNK_SIZE, Math.min((i + 1) * CHUNK_SIZE, blob.size));
       const b64   = await blobToBase64(slice);
       const chunk = b64.includes(',') ? b64.split(',')[1] : b64;
-      const resp  = await fetch(SCRIPT_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ action: 'chunk', uploadId, index: i, chunk }),
-        redirect: 'follow'
-      });
-      if (!resp.ok) throw new Error('Upload interrupted at chunk ' + i);
-      updateProgress(5 + ((i + 1) / total) * 65);
+      let lastErr;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          const resp = await fetch(SCRIPT_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({ action: 'chunk', uploadId, index: i, chunk }),
+            redirect: 'follow'
+          });
+          if (!resp.ok) throw new Error('Upload interrupted at chunk ' + i);
+          const rd = await resp.json();
+          if (!rd.ok) throw new Error(rd.error || ('Upload failed at chunk ' + i));
+          updateProgress(5 + ((i + 1) / total) * 65);
+          return;
+        } catch (e) {
+          lastErr = e;
+        }
+      }
+      throw lastErr;
     }
 
-    await Promise.all(Array.from({ length: total }, (_, i) => uploadOne(i)));
+    // Upload chunks with limited concurrency so we don't overwhelm the
+    // upstream Apps Script endpoint on longer videos (was firing every
+    // chunk at once, which caused request timeouts / non-JSON responses).
+    const CONCURRENCY = 4;
+    let next = 0;
+    async function worker() {
+      while (next < total) {
+        const i = next++;
+        await uploadOne(i);
+      }
+    }
+    await Promise.all(Array.from({ length: Math.min(CONCURRENCY, total) }, worker));
     const fr = await fetch(SCRIPT_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
