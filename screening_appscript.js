@@ -216,6 +216,20 @@ function processCoachApplications() {
 
       const fileId = extractDriveFileId(videoUrl);
 
+      // Both Apps Script's in-memory blob size (~50MB) and Groq/OpenAI's
+      // transcription upload limit (~25MB) cap out well below a multi-
+      // minute video. There's no way to transcribe the full file here
+      // without extracting just the audio track first, which needs real
+      // transcoding this script can't do — so skip cleanly instead of
+      // crashing on files we know will fail.
+      const sizeMB = DriveApp.getFileById(fileId).getSize() / (1024 * 1024);
+      if (sizeMB > 24) {
+        sheet.getRange(row + 1, 16).setValue(
+          'SKIPPED: video is ' + sizeMB.toFixed(1) + 'MB — over the ~24MB auto-transcription limit'
+        );
+        continue;
+      }
+
       const transcript = transcribeVideo(fileId);
 
       const analysis = evaluateCoach(transcript);
