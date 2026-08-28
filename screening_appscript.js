@@ -381,11 +381,11 @@ Transcript:
 ${transcript}
 `;
 
-  // If this 404s with "model does not exist", Groq has changed its lineup —
-  // check console.groq.com/docs/models (or call testGroq()) for a current
-  // valid id and swap it in here.
+  // Confirmed available on this account via testGroq() (GET /v1/models).
+  // If this ever 404s again, re-run testGroq() and pick another id that
+  // lists "json_mode" in supported_features.
   const payload = {
-    model: "llama-3.1-8b-instant",
+    model: "openai/gpt-oss-120b",
     response_format: {
       type: "json_object"
     },
