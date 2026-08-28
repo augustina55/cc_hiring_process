@@ -4,6 +4,7 @@ const TEMP_FOLDER  = 'cc_hiring_temp';
 // Set via: Project Settings > Script Properties > GROQ_API_KEY
 const GROQ_API_KEY = PropertiesService.getScriptProperties().getProperty('GROQ_API_KEY');
 const SHEET_NAME = "Sheet2";
+const TRANSCRIBE_URL = 'https://screening-phi.vercel.app/api/transcribe';
 
 function getOrCreateSheet(name) {
   const ss = SpreadsheetApp.openById(SHEET_ID);
@@ -227,21 +228,7 @@ function processCoachApplications() {
 
       const fileId = extractDriveFileId(videoUrl);
 
-      // Both Apps Script's in-memory blob size (~50MB) and Groq/OpenAI's
-      // transcription upload limit (~25MB) cap out well below a multi-
-      // minute video. There's no way to transcribe the full file here
-      // without extracting just the audio track first, which needs real
-      // transcoding this script can't do — so skip cleanly instead of
-      // crashing on files we know will fail.
-      const sizeMB = DriveApp.getFileById(fileId).getSize() / (1024 * 1024);
-      if (sizeMB > 24) {
-        sheet.getRange(row + 1, 16).setValue(
-          'SKIPPED: video is ' + sizeMB.toFixed(1) + 'MB — over the ~24MB auto-transcription limit'
-        );
-        continue;
-      }
-
-      const transcript = transcribeVideo(fileId);
+      const transcript = transcribeViaVercel(fileId);
 
       const analysis = evaluateCoach(transcript);
 
@@ -285,40 +272,29 @@ function extractDriveFileId(url) {
 }
 
 //trancription 
-function transcribeVideo(fileId) {
-
-  const file = DriveApp.getFileById(fileId);
-
-  const blob = file.getBlob();
-
-  const response = UrlFetchApp.fetch(
-    "https://api.groq.com/openai/v1/audio/transcriptions",
-    {
-      method: "post",
-      headers: {
-        Authorization: "Bearer " + GROQ_API_KEY
-      },
-      payload: {
-        model: "whisper-large-v3-turbo",
-        file: blob
-      },
-      muteHttpExceptions: true
-    }
-  );
+// Apps Script can't do the audio extraction a large video needs before
+// transcription (Utilities.newBlob()/getBlob() cap out around 50MB, and
+// Groq's own upload limit is ~25MB — both well under a multi-minute video).
+// Vercel downloads the video from Drive directly, strips it to a small
+// audio-only track with ffmpeg, and transcribes that instead.
+function transcribeViaVercel(fileId) {
+  const response = UrlFetchApp.fetch(TRANSCRIBE_URL, {
+    method: 'post',
+    contentType: 'application/json',
+    payload: JSON.stringify({ fileId }),
+    muteHttpExceptions: true
+  });
 
   const code = response.getResponseCode();
   const text = response.getContentText();
   if (code !== 200) {
-    throw new Error('Groq transcription returned ' + code + ': ' + text.slice(0, 300));
+    throw new Error('Transcription service returned ' + code + ': ' + text.slice(0, 300));
   }
 
   const result = JSON.parse(text);
+  if (!result.ok) throw new Error(result.error || 'Transcription failed');
 
-  if (!result.text) {
-    throw new Error(text);
-  }
-
-  return result.text;
+  return result.transcript;
 }
 
 function evaluateCoach(transcript) {
