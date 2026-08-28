@@ -3,7 +3,20 @@ const VIDEO_FOLDER = 'cc_hiring_videos';
 const TEMP_FOLDER  = 'cc_hiring_temp';
 // Set via: Project Settings > Script Properties > GROQ_API_KEY
 const GROQ_API_KEY = PropertiesService.getScriptProperties().getProperty('GROQ_API_KEY');
-const SHEET_NAME = "Sheet1";
+const SHEET_NAME = "Sheet2";
+
+function getOrCreateSheet(name) {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  let sheet = ss.getSheetByName(name);
+  if (!sheet) sheet = ss.insertSheet(name);
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow([
+      'Timestamp', 'Name', 'Phone',
+      'Video URL', 'Submission Type', 'Transcript_text'
+    ]);
+  }
+  return sheet;
+}
 
 function testGroq() {
 
@@ -167,14 +180,7 @@ function finalizeUpload(data) {
 
 function submitForm(data) {
   try {
-    const ss    = SpreadsheetApp.openById(SHEET_ID);
-    const sheet = ss.getSheets()[0];
-    if (sheet.getLastRow() === 0) {
-      sheet.appendRow([
-        'Timestamp', 'Name', 'Phone',
-        'Video URL', 'Submission Type', 'Transcript_text'
-      ]);
-    }
+    const sheet = getOrCreateSheet(SHEET_NAME);
     sheet.appendRow([
       new Date(),
       data.name,
