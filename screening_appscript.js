@@ -319,25 +319,38 @@ so tone of voice, facial expression, and body language cannot be assessed. Base 
 judgment strictly on what the words themselves show, and say so explicitly when something
 can't be determined from text alone (e.g. actual vocal warmth or energy).
 
+IMPORTANT — this transcript comes from automatic speech recognition and WILL contain
+phonetic misspellings of chess vocabulary, since ASR has no idea it's listening to a chess
+lesson. Common examples: "peace"/"piece" for "piece", "rope" for "rook", "shape" for "check",
+"knights"/"nights", "pond" for "pawn". Read past these — infer the chess term the coach
+actually said from context, and NEVER penalize "chess_accuracy" or "communication" for what
+is clearly a transcription artifact rather than something the coach said wrong. Only mark
+chess_accuracy down for an actual conceptual/rules error, not a misheard word.
+
 Every score MUST be justified by a "_reason" field that either quotes or closely paraphrases
 a specific part of the transcript. Do not give a reason that just restates the score in words
 ("engagement is high because coach is engaging") — point at the actual evidence. If the
 transcript has nothing supporting a category, say so plainly and score it low.
 
-For "engagement" specifically, look for concrete textual signals of interaction with the
-(imagined) student — not just enthusiasm. Evidence includes:
-- Direct address ("you", "can you see", "your turn")
-- Checking for understanding ("does that make sense?", "do you see why?")
-- Posing questions and pausing for a response, even a rhetorical one
+For "engagement" specifically, look for concrete textual signals of addressing and involving
+the student — remember this is a solo demo recording, not a live two-way class, so there is
+no real back-and-forth to find. Don't penalize it for that. Evidence includes:
+- Direct address ("you", "guys", "can you see", "your turn")
+- Rhetorical check-ins, even without a real answer ("right?", "does that make sense?", "are
+  you guys excited?")
 - Encouragement or positive reinforcement ("great job", "well done", "nice try")
 - Inviting the student to try something ("now you try", "let's practice this together")
-A transcript that is a one-way, uninterrupted lecture with no direct address or questions
-should score LOW on engagement even if the explanation itself is otherwise clear — note that
-explicitly in "engagement_reason".
+- Explicitly structuring the lesson for a listener ("mark this as rule one", "so what do I
+  mean by X? let's understand that first")
+Repeated use of these — even simple ones like frequent "right?" / "guys" — should score
+MODERATE-TO-HIGH, since that's what genuine engagement looks like in a monologue teaching
+format. Reserve a LOW score for a transcript that reads as a flat, uninterrupted lecture with
+none of the above at all.
 
 Also assess whether the transcript itself is usable for evaluation. Speech-to-text can produce
 garbled or truncated output; if the transcript is very short, incoherent, or clearly missing
-large portions of speech, set "transcript_confidence" to "low" and say why in
+large portions of speech (as opposed to just containing scattered misheard chess words, which
+is normal and expected — see above), set "transcript_confidence" to "low" and say why in
 "transcript_confidence_reason" — a low-confidence transcript means the scores below are
 unreliable and the application should be reviewed manually.
 
