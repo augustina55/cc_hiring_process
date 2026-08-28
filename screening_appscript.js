@@ -295,12 +295,16 @@ function transcribeVideo(fileId) {
     }
   );
 
-  const result = JSON.parse(
-    response.getContentText()
-  );
+  const code = response.getResponseCode();
+  const text = response.getContentText();
+  if (code !== 200) {
+    throw new Error('Groq transcription returned ' + code + ': ' + text.slice(0, 300));
+  }
+
+  const result = JSON.parse(text);
 
   if (!result.text) {
-    throw new Error(response.getContentText());
+    throw new Error(text);
   }
 
   return result.text;
@@ -377,8 +381,11 @@ Transcript:
 ${transcript}
 `;
 
+  // If this 404s with "model does not exist", Groq has changed its lineup —
+  // check console.groq.com/docs/models (or call testGroq()) for a current
+  // valid id and swap it in here.
   const payload = {
-    model: "llama-3.3-70b-versatile",
+    model: "llama-3.1-8b-instant",
     response_format: {
       type: "json_object"
     },
