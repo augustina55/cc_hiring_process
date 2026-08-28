@@ -12,13 +12,18 @@ function getOrCreateSheet(name) {
   if (!sheet) sheet = ss.insertSheet(name);
   if (sheet.getLastRow() === 0) {
     sheet.appendRow([
-      'Timestamp', 'Name', 'Phone',              // A-C
-      'Video URL', 'Submission Type',            // D-E
-      'Transcript_text',                         // F
-      'Communication', 'Teaching', 'Kid Friendly', // G-I
-      'Engagement', 'Chess Accuracy', 'Overall',   // J-L
-      'Status', 'Strengths', 'Concerns',           // M-O
-      'Processed'                                  // P
+      'Timestamp', 'Name', 'Phone',                          // A-C
+      'Video URL', 'Submission Type',                        // D-E
+      'Transcript_text',                                     // F
+      'Communication', 'Communication Reason',               // G-H
+      'Teaching', 'Teaching Reason',                          // I-J
+      'Kid Friendly', 'Kid Friendly Reason',                  // K-L
+      'Engagement', 'Engagement Reason',                      // M-N
+      'Chess Accuracy', 'Chess Accuracy Reason',              // O-P
+      'Overall', 'Status', 'Decision Reason',                 // Q-S
+      'Transcript Confidence', 'Transcript Confidence Reason',// T-U
+      'Strengths', 'Concerns',                                // V-W
+      'Processed'                                             // X
     ]);
   }
   return sheet;
@@ -214,7 +219,7 @@ function processCoachApplications() {
 
   for (let row = 1; row < data.length; row++) {
 
-    const processed = data[row][15]; // P — Processed marker
+    const processed = data[row][23]; // X — Processed marker
 
     if (processed === "DONE") continue;
 
@@ -232,27 +237,35 @@ function processCoachApplications() {
 
       const analysis = evaluateCoach(transcript);
 
-      sheet.getRange(row + 1, 6).setValue(transcript);           // F — Transcript_text
-      sheet.getRange(row + 1, 7).setValue(analysis.communication);
-      sheet.getRange(row + 1, 8).setValue(analysis.teaching);
-      sheet.getRange(row + 1, 9).setValue(analysis.kid_friendly);
-      sheet.getRange(row + 1, 10).setValue(analysis.engagement);
-      sheet.getRange(row + 1, 11).setValue(analysis.chess_accuracy);
-      sheet.getRange(row + 1, 12).setValue(analysis.overall);
-      sheet.getRange(row + 1, 13).setValue(analysis.status);
-      sheet.getRange(row + 1, 14).setValue(
-        analysis.strengths.join("\n")
+      sheet.getRange(row + 1, 6).setValue(transcript);                    // F  — Transcript_text
+      sheet.getRange(row + 1, 7).setValue(analysis.communication);        // G
+      sheet.getRange(row + 1, 8).setValue(analysis.communication_reason); // H
+      sheet.getRange(row + 1, 9).setValue(analysis.teaching);             // I
+      sheet.getRange(row + 1, 10).setValue(analysis.teaching_reason);     // J
+      sheet.getRange(row + 1, 11).setValue(analysis.kid_friendly);        // K
+      sheet.getRange(row + 1, 12).setValue(analysis.kid_friendly_reason); // L
+      sheet.getRange(row + 1, 13).setValue(analysis.engagement);          // M
+      sheet.getRange(row + 1, 14).setValue(analysis.engagement_reason);   // N
+      sheet.getRange(row + 1, 15).setValue(analysis.chess_accuracy);      // O
+      sheet.getRange(row + 1, 16).setValue(analysis.chess_accuracy_reason); // P
+      sheet.getRange(row + 1, 17).setValue(analysis.overall);             // Q
+      sheet.getRange(row + 1, 18).setValue(analysis.status);              // R
+      sheet.getRange(row + 1, 19).setValue(analysis.decision_reason);     // S
+      sheet.getRange(row + 1, 20).setValue(analysis.transcript_confidence); // T
+      sheet.getRange(row + 1, 21).setValue(analysis.transcript_confidence_reason); // U
+      sheet.getRange(row + 1, 22).setValue(
+        (analysis.strengths || []).join("\n")
       );
-      sheet.getRange(row + 1, 15).setValue(
-        analysis.concerns.join("\n")
+      sheet.getRange(row + 1, 23).setValue(
+        (analysis.concerns || []).join("\n")
       );
-      sheet.getRange(row + 1, 16).setValue("DONE");             // P — Processed marker
+      sheet.getRange(row + 1, 24).setValue("DONE");                       // X — Processed marker
 
     } catch (e) {
 
       Logger.log(e);
 
-      sheet.getRange(row + 1, 16)
+      sheet.getRange(row + 1, 24)
         .setValue("ERROR: " + e.message);
     }
   }
@@ -301,67 +314,82 @@ function evaluateCoach(transcript) {
 
   const prompt = `
 You are a senior hiring manager evaluating chess coaches who teach children aged 6-12.
+You are working ONLY from a speech-to-text transcript — there is no audio or video signal,
+so tone of voice, facial expression, and body language cannot be assessed. Base every
+judgment strictly on what the words themselves show, and say so explicitly when something
+can't be determined from text alone (e.g. actual vocal warmth or energy).
 
-Analyze this transcript.
+Every score MUST be justified by a "_reason" field that either quotes or closely paraphrases
+a specific part of the transcript. Do not give a reason that just restates the score in words
+("engagement is high because coach is engaging") — point at the actual evidence. If the
+transcript has nothing supporting a category, say so plainly and score it low.
 
-Return ONLY valid JSON.
+For "engagement" specifically, look for concrete textual signals of interaction with the
+(imagined) student — not just enthusiasm. Evidence includes:
+- Direct address ("you", "can you see", "your turn")
+- Checking for understanding ("does that make sense?", "do you see why?")
+- Posing questions and pausing for a response, even a rhetorical one
+- Encouragement or positive reinforcement ("great job", "well done", "nice try")
+- Inviting the student to try something ("now you try", "let's practice this together")
+A transcript that is a one-way, uninterrupted lecture with no direct address or questions
+should score LOW on engagement even if the explanation itself is otherwise clear — note that
+explicitly in "engagement_reason".
+
+Also assess whether the transcript itself is usable for evaluation. Speech-to-text can produce
+garbled or truncated output; if the transcript is very short, incoherent, or clearly missing
+large portions of speech, set "transcript_confidence" to "low" and say why in
+"transcript_confidence_reason" — a low-confidence transcript means the scores below are
+unreliable and the application should be reviewed manually.
+
+Return ONLY valid JSON in this exact shape:
 
 {
-  "communication": 0,
-  "teaching": 0,
-  "kid_friendly": 0,
-  "engagement": 0,
-  "chess_accuracy": 0,
+  "communication": 0, "communication_reason": "",
+  "teaching": 0, "teaching_reason": "",
+  "kid_friendly": 0, "kid_friendly_reason": "",
+  "engagement": 0, "engagement_reason": "",
+  "chess_accuracy": 0, "chess_accuracy_reason": "",
   "overall": 0,
 
   "status": "",
+  "decision_reason": "",
 
-  "english_level": "",
-  "teaching_style": "",
-  "recommended_student_level": "",
+  "transcript_confidence": "high",
+  "transcript_confidence_reason": "",
 
   "strengths": [],
   "concerns": [],
-  "red_flags": [],
-
-  "summary": "",
-  "hire_recommendation": ""
+  "red_flags": []
 }
-Scoring:
+
+Scoring guide (each 0-10):
 
 Communication:
-Grammar, fluency, confidence.
+Grammar, fluency, confidence in how ideas are expressed.
 
 Teaching:
-Structured explanation,
-examples,
-clarity.
+Structured explanation, use of examples, clarity of the chess concept.
 
 Kid Friendly:
-Simple language,
-encouraging tone.
+Simple language a 6-12 year old could follow, encouraging tone in the wording used.
 
 Engagement:
-Interactive teaching,
-questions,
-student involvement.
+Concrete interaction signals as described above — NOT just how enthusiastic the topic sounds.
 
 Chess Accuracy:
-Correctness of chess concept.
+Correctness of the chess concept actually explained.
 
-Status:
+"overall" is your holistic judgment (not a strict average) of hireability for teaching kids.
 
-Strongly Recommended:
-overall >= 8.5
+Status (based on "overall"):
+Strongly Recommended: overall >= 8.5
+Recommended: overall >= 7
+Borderline: overall >= 6
+Reject: overall < 6
 
-Recommended:
-overall >= 7
-
-Borderline:
-overall >= 6
-
-Reject:
-overall < 6
+"decision_reason" must be 2-4 sentences explaining specifically why this status was chosen,
+citing the strongest piece of supporting evidence from the transcript (quote or close
+paraphrase) — a hiring manager should be able to read only this field and understand the call.
 
 Transcript:
 
