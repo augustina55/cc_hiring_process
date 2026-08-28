@@ -11,8 +11,13 @@ function getOrCreateSheet(name) {
   if (!sheet) sheet = ss.insertSheet(name);
   if (sheet.getLastRow() === 0) {
     sheet.appendRow([
-      'Timestamp', 'Name', 'Phone',
-      'Video URL', 'Submission Type', 'Transcript_text'
+      'Timestamp', 'Name', 'Phone',              // A-C
+      'Video URL', 'Submission Type',            // D-E
+      'Transcript_text',                         // F
+      'Communication', 'Teaching', 'Kid Friendly', // G-I
+      'Engagement', 'Chess Accuracy', 'Overall',   // J-L
+      'Status', 'Strengths', 'Concerns',           // M-O
+      'Processed'                                  // P
     ]);
   }
   return sheet;
